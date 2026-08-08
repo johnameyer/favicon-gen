@@ -1,5 +1,9 @@
 <main class="main">
   <h1>Favicon Generator</h1>
-  <app-canvas-preview (layersResolved)="onLayersResolved($event)" />
+  <app-emoji-picker (emojiSelected)="onEmojiSelected($event)" />
+  @if (selectionLoading()) {
+    <p data-testid="selection-loading">Loading selected emoji…</p>
+  }
+  <app-canvas-preview [layers]="selectedLayers()" (layersResolved)="onLayersResolved($event)" />
   <button type="button" [disabled]="!currentLayers()" (click)="downloadIco()">Download favicon.ico</button>
 </main>

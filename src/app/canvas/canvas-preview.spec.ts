@@ -99,4 +99,26 @@ describe('CanvasPreview', () => {
     expect(fixture.componentInstance.status()).toBe('loaded');
     expect(fetchPlaceholderEmoji).not.toHaveBeenCalled();
   });
+
+  it('re-renders and re-emits when the layers input changes after initial view init', async () => {
+    fetchPlaceholderEmoji.mockResolvedValue('<svg>placeholder</svg>');
+    const fixture = TestBed.createComponent(CanvasPreview);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const emitted: unknown[] = [];
+    fixture.componentInstance.layersResolved.subscribe((layers) => emitted.push(layers));
+
+    fixture.componentRef.setInput('layers', [
+      { id: 'picked', svgMarkup: '<svg>picked</svg>', transform: { x: 0, y: 0, scale: 1, rotation: 0 } },
+    ]);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.status()).toBe('loaded');
+    expect(emitted).toEqual([
+      [{ id: 'picked', svgMarkup: '<svg>picked</svg>', transform: { x: 0, y: 0, scale: 1, rotation: 0 } }],
+    ]);
+  });
 });

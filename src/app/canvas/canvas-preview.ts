@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  effect,
   inject,
   input,
   output,
@@ -64,13 +65,25 @@ export class CanvasPreview implements AfterViewInit {
 
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly emojiSource = inject(EmojiSourceService);
+  private readonly viewReady = signal(false);
 
-  ngAfterViewInit(): void {
-    void this.init();
+  constructor() {
+    // Re-resolves whenever the explicit `layers` input changes (e.g. a
+    // picker selection), not just once on initial view init.
+    effect(() => {
+      const explicitLayers = this.layers();
+      if (!this.viewReady()) {
+        return;
+      }
+      void this.init(explicitLayers);
+    });
   }
 
-  private async init(): Promise<void> {
-    const explicitLayers = this.layers();
+  ngAfterViewInit(): void {
+    this.viewReady.set(true);
+  }
+
+  private async init(explicitLayers: Layer[] | undefined): Promise<void> {
     if (explicitLayers) {
       this.status.set('loaded');
       this.layersResolved.emit(explicitLayers);

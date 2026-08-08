@@ -8,9 +8,10 @@ Under incremental development. Built so far:
 
 - Layer-based canvas preview (`src/app/canvas/`) — the canvas is modeled as a stack of `Layer` objects (`src/app/models/layer.ts`), each with its own SVG source and transform, so future features like multi-emoji compositing and per-layer recoloring can slot in without a rewrite.
 - `favicon.ico` download (`src/app/export/`) — a hand-rolled ICO encoder (no dependency) renders the current layer stack at 16/32/48px and bundles them into a real multi-resolution `.ico` file, downloaded client-side.
-- The placeholder emoji (😀 U+1F600) now loads asynchronously from the Noto Emoji CDN mirror on jsDelivr (`src/app/canvas/emoji-source.service.ts`), with a loading/error state shown in the preview while the fetch is in flight. It's still a single fixed emoji — no picker/search UI or codepoint-driven fetching yet.
+- Emoji SVG markup loads asynchronously from the Noto Emoji CDN mirror on jsDelivr (`src/app/canvas/emoji-source.service.ts`), with a loading/error state shown in the preview while a fetch is in flight. `EmojiSourceService.fetchEmoji(codepoints)` builds the CDN URL from any Noto codepoint filename fragment (single codepoint or multi-codepoint ZWJ sequence, e.g. `1f600` or `1f468_200d_1f469_200d_1f467`); `fetchPlaceholderEmoji()` is now a thin wrapper around it for the default grinning-face placeholder.
+- Emoji picker/search UI (`src/app/emoji-picker/`) — a searchable grid backed by `unicode-emoji-json`, filtering ~1900+ emoji by name/slug. Selecting an emoji fetches its SVG via `EmojiSourceService.fetchEmoji` and feeds it into `CanvasPreview` as an explicit single-layer stack, overriding the default placeholder. **Known limitation:** the "Flags" group is excluded from the picker, since flag emoji (regional indicator pairs) aren't stored under Noto's codepoint-filename convention (they live under `third_party/region-flags` with different naming) and would 404 via this fetch scheme.
 
-Planned next: PNG set + manifest export, zip bundling, emoji picker/search UI, SVG upload/paste.
+Planned next: PNG set + manifest export, zip bundling, SVG upload/paste, flag emoji support.
 
 ## Development server
 

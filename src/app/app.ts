@@ -1,22 +1,47 @@
 import { Component, inject, signal } from '@angular/core';
-import { CanvasPreview } from './canvas/canvas-preview';
+import { CanvasPreview, buildPlaceholderLayers } from './canvas/canvas-preview';
+import { EmojiSourceService } from './canvas/emoji-source.service';
+import { EmojiPicker, EmojiSelection } from './emoji-picker/emoji-picker';
 import { Layer } from './models/layer';
 import { FaviconExportService } from './export/favicon-export.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CanvasPreview],
+  imports: [CanvasPreview, EmojiPicker],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
 export class App {
   private readonly exportService = inject(FaviconExportService);
+  private readonly emojiSource = inject(EmojiSourceService);
 
   /** Latest layer stack resolved by the preview (explicit input or fetched placeholder). */
   readonly currentLayers = signal<Layer[] | undefined>(undefined);
 
+  /**
+   * Explicit layer stack to pass into CanvasPreview once the user has picked
+   * an emoji. Undefined means "use CanvasPreview's own default placeholder".
+   */
+  readonly selectedLayers = signal<Layer[] | undefined>(undefined);
+
+  /** True while fetching the SVG for a picker-driven selection. */
+  readonly selectionLoading = signal(false);
+
   onLayersResolved(layers: Layer[]): void {
     this.currentLayers.set(layers);
+  }
+
+  async onEmojiSelected(selection: EmojiSelection): Promise<void> {
+    this.selectionLoading.set(true);
+    try {
+      const svgMarkup = await this.emojiSource.fetchEmoji(selection.codepoints);
+      this.selectedLayers.set(buildPlaceholderLayers(svgMarkup));
+    } catch (error) {
+      // Keep showing whatever was previously selected; just report the failure.
+      console.error(`Failed to load emoji "${selection.name}":`, error);
+    } finally {
+      this.selectionLoading.set(false);
+    }
   }
 
   async downloadIco(): Promise<void> {
