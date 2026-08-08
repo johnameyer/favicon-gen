@@ -1,11 +1,10 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
+import { CanvasPreview } from './canvas/canvas-preview';
 
 @Component({
   selector: 'app-root',
-  imports: [],
+  imports: [CanvasPreview],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App {
-  protected readonly title = signal('favicon');
-}
+export class App {}
