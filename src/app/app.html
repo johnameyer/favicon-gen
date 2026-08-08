@@ -37,5 +37,37 @@
     <p data-testid="selection-loading">Loading selected emoji…</p>
   }
   <app-canvas-preview [layers]="selectedLayers()" (layersResolved)="onLayersResolved($event)" />
-  <button type="button" [disabled]="!currentLayers()" (click)="downloadIco()">Download favicon.ico</button>
+
+  <div class="export-mode-tabs" role="tablist">
+    <button
+      type="button"
+      role="tab"
+      class="export-mode-tab"
+      [class.active]="exportMode() === 'ico'"
+      [attr.aria-selected]="exportMode() === 'ico'"
+      (click)="setExportMode('ico')"
+      data-testid="mode-ico"
+    >
+      ICO only
+    </button>
+    <button
+      type="button"
+      role="tab"
+      class="export-mode-tab"
+      [class.active]="exportMode() === 'bundle'"
+      [attr.aria-selected]="exportMode() === 'bundle'"
+      (click)="setExportMode('bundle')"
+      data-testid="mode-bundle"
+    >
+      Full bundle
+    </button>
+  </div>
+
+  <button type="button" [disabled]="!currentLayers()" (click)="download()">
+    @if (exportMode() === 'ico') {
+      Download favicon.ico
+    } @else {
+      Download bundle (.zip)
+    }
+  </button>
 </main>

@@ -47,10 +47,10 @@ test('searching and selecting an emoji updates the canvas preview and download s
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Download favicon.ico' }).click(),
+    page.getByRole('button', { name: 'Download bundle (.zip)' }).click(),
   ]);
 
-  expect(download.suggestedFilename()).toBe('favicon.ico');
+  expect(download.suggestedFilename()).toBe('favicon-package.zip');
   const stream = await download.createReadStream();
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {

@@ -41,8 +41,29 @@ test('canvas preview renders', async ({ page }) => {
   expect(hasDrawnPixels).toBe(true);
 });
 
-test('downloading favicon.ico produces a non-empty file', async ({ page }) => {
+test('downloading in full bundle mode (default) produces a non-empty favicon-package.zip', async ({ page }) => {
   await page.goto('/');
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download bundle (.zip)' }).click(),
+  ]);
+
+  expect(download.suggestedFilename()).toBe('favicon-package.zip');
+
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk as Buffer);
+  }
+  const bytes = Buffer.concat(chunks);
+  expect(bytes.length).toBeGreaterThan(0);
+});
+
+test('switching to ICO-only mode downloads a non-empty favicon.ico', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('[data-testid="mode-ico"]').click();
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),

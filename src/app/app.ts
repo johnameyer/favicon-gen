@@ -9,6 +9,9 @@ import { FaviconExportService } from './export/favicon-export.service';
 /** Which source tab is currently active/being used to feed the canvas. */
 export type SourceTab = 'emoji' | 'upload';
 
+/** Which export mode is selected for the download button. */
+export type ExportMode = 'ico' | 'bundle';
+
 @Component({
   selector: 'app-root',
   imports: [CanvasPreview, EmojiPicker, SvgUpload],
@@ -34,6 +37,9 @@ export class App {
 
   /** True while fetching the SVG for a picker-driven selection. */
   readonly selectionLoading = signal(false);
+
+  /** Which export mode the download button uses: ICO-only or the full zip bundle. */
+  readonly exportMode = signal<ExportMode>('bundle');
 
   onLayersResolved(layers: Layer[]): void {
     this.currentLayers.set(layers);
@@ -68,17 +74,25 @@ export class App {
     this.loadSvgAsCurrentSource(svgMarkup);
   }
 
-  async downloadIco(): Promise<void> {
+  setExportMode(mode: ExportMode): void {
+    this.exportMode.set(mode);
+  }
+
+  async download(): Promise<void> {
     const layers = this.currentLayers();
     if (!layers) {
       return;
     }
-    const blob = await this.exportService.exportIco(layers);
+    const mode = this.exportMode();
+    const blob =
+      mode === 'ico' ? await this.exportService.exportIco(layers) : await this.exportService.exportBundle(layers);
+    const filename = mode === 'ico' ? 'favicon.ico' : 'favicon-package.zip';
+
     const url = URL.createObjectURL(blob);
     try {
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'favicon.ico';
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       link.remove();
