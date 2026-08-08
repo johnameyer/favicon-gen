@@ -34,3 +34,22 @@ test('canvas preview renders', async ({ page }) => {
   });
   expect(hasDrawnPixels).toBe(true);
 });
+
+test('downloading favicon.ico produces a non-empty file', async ({ page }) => {
+  await page.goto('/');
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Download favicon.ico' }).click(),
+  ]);
+
+  expect(download.suggestedFilename()).toBe('favicon.ico');
+
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk as Buffer);
+  }
+  const bytes = Buffer.concat(chunks);
+  expect(bytes.length).toBeGreaterThan(0);
+});
