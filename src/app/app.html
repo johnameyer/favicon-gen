@@ -38,6 +38,10 @@
   }
   <app-canvas-preview [layers]="selectedLayers()" (layersResolved)="onLayersResolved($event)" />
 
+  @if (currentLayers()) {
+    <app-recolor-panel [svgMarkup]="currentLayers()![0].svgMarkup" (colorsChanged)="onColorsChanged($event)" />
+  }
+
   <div class="export-mode-tabs" role="tablist">
     <button
       type="button"

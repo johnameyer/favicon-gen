@@ -5,6 +5,7 @@ import { EmojiPicker, EmojiSelection } from './emoji-picker/emoji-picker';
 import { SvgUpload } from './svg-upload/svg-upload';
 import { Layer } from './models/layer';
 import { FaviconExportService } from './export/favicon-export.service';
+import { RecolorPanel } from './recolor/recolor-panel';
 
 /** Which source tab is currently active/being used to feed the canvas. */
 export type SourceTab = 'emoji' | 'upload';
@@ -14,7 +15,7 @@ export type ExportMode = 'ico' | 'bundle';
 
 @Component({
   selector: 'app-root',
-  imports: [CanvasPreview, EmojiPicker, SvgUpload],
+  imports: [CanvasPreview, EmojiPicker, SvgUpload, RecolorPanel],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -47,6 +48,21 @@ export class App {
 
   setActiveTab(tab: SourceTab): void {
     this.activeTab.set(tab);
+  }
+
+  /**
+   * Applies a recolor override map to the current (single) layer and pushes
+   * the updated stack back into `selectedLayers`, so `CanvasPreview`'s
+   * existing `layers` input reactivity re-renders with the new colors.
+   */
+  onColorsChanged(colorOverrides: Record<string, string>): void {
+    const layers = this.currentLayers();
+    if (!layers || layers.length === 0) {
+      return;
+    }
+    const [layer, ...rest] = layers;
+    const updated: Layer[] = [{ ...layer, colorOverrides }, ...rest];
+    this.selectedLayers.set(updated);
   }
 
   /**

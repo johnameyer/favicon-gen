@@ -13,6 +13,13 @@ export interface Layer {
   svgMarkup: string;
   /** Placement of this layer within the canvas's coordinate space. */
   transform: LayerTransform;
+  /**
+   * Optional recolor overrides: a map of original hex color (as found in
+   * `svgMarkup`) to replacement hex color. When present, rendering/export
+   * should use the *effective* markup (see `effectiveSvgMarkup` in
+   * `render-layers.ts`) rather than `svgMarkup` directly.
+   */
+  colorOverrides?: Record<string, string>;
 }
 
 /** Position, scale and rotation of a layer within the canvas. */

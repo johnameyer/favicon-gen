@@ -1,5 +1,20 @@
 import { Layer } from '../models/layer';
+import { applyColorMap } from '../recolor/color-utils';
 import { svgToDataUrl } from './svg-data-url';
+
+/**
+ * Returns the SVG markup that should actually be rendered/exported for a
+ * layer: `layer.svgMarkup` with `layer.colorOverrides` applied, if any, or
+ * the raw markup unchanged otherwise. Kept as a standalone pure helper (not
+ * baked into `renderLayersToCanvas`) so callers other than the canvas
+ * renderer can also honor overrides consistently.
+ */
+export function effectiveSvgMarkup(layer: Layer): string {
+  if (!layer.colorOverrides || Object.keys(layer.colorOverrides).length === 0) {
+    return layer.svgMarkup;
+  }
+  return applyColorMap(layer.svgMarkup, layer.colorOverrides);
+}
 
 /**
  * Renders a layer stack onto a freshly created off-screen canvas at the
@@ -20,7 +35,7 @@ export async function renderLayersToCanvas(layers: Layer[], size: number): Promi
   ctx.clearRect(0, 0, size, size);
 
   for (const layer of layers) {
-    const image = await loadImage(svgToDataUrl(layer.svgMarkup));
+    const image = await loadImage(svgToDataUrl(effectiveSvgMarkup(layer)));
     drawLayer(ctx, image, layer, size);
   }
 
