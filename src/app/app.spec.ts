@@ -42,4 +42,29 @@ describe('App', () => {
     expect(fixture.componentInstance.selectedLayers()?.[0].svgMarkup).toBe('<svg>mock</svg>');
     expect(fixture.componentInstance.selectionLoading()).toBe(false);
   });
+
+  it('loads uploaded SVG markup as the current source via the shared method', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+
+    fixture.componentInstance.onSvgUploaded('<svg>uploaded</svg>');
+
+    expect(fixture.componentInstance.selectedLayers()).toHaveLength(1);
+    expect(fixture.componentInstance.selectedLayers()?.[0].svgMarkup).toBe('<svg>uploaded</svg>');
+  });
+
+  it('switches tabs and renders the corresponding source component', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.querySelector('app-emoji-picker')).toBeTruthy();
+    expect(compiled.querySelector('app-svg-upload')).toBeFalsy();
+
+    fixture.componentInstance.setActiveTab('upload');
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('app-svg-upload')).toBeTruthy();
+    expect(compiled.querySelector('app-emoji-picker')).toBeFalsy();
+  });
 });

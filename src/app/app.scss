@@ -5,3 +5,29 @@
   gap: 1rem;
   padding: 2rem;
 }
+
+.source-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.source-tab {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-family: sans-serif;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: #f5f5f5;
+  }
+
+  &.active {
+    border-color: #666;
+    background: #eee;
+    font-weight: bold;
+  }
+}

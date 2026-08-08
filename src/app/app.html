@@ -1,6 +1,38 @@
 <main class="main">
   <h1>Favicon Generator</h1>
-  <app-emoji-picker (emojiSelected)="onEmojiSelected($event)" />
+
+  <div class="source-tabs" role="tablist">
+    <button
+      type="button"
+      role="tab"
+      class="source-tab"
+      [class.active]="activeTab() === 'emoji'"
+      [attr.aria-selected]="activeTab() === 'emoji'"
+      (click)="setActiveTab('emoji')"
+      data-testid="tab-emoji"
+    >
+      Emoji
+    </button>
+    <button
+      type="button"
+      role="tab"
+      class="source-tab"
+      [class.active]="activeTab() === 'upload'"
+      [attr.aria-selected]="activeTab() === 'upload'"
+      (click)="setActiveTab('upload')"
+      data-testid="tab-upload"
+    >
+      Custom SVG
+    </button>
+  </div>
+
+  @if (activeTab() === 'emoji') {
+    <app-emoji-picker (emojiSelected)="onEmojiSelected($event)" />
+  }
+  @if (activeTab() === 'upload') {
+    <app-svg-upload (svgSelected)="onSvgUploaded($event)" />
+  }
+
   @if (selectionLoading()) {
     <p data-testid="selection-loading">Loading selected emoji…</p>
   }
