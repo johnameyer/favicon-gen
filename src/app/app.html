@@ -1,5 +1,5 @@
 <main class="main">
   <h1>Favicon Generator</h1>
-  <app-canvas-preview />
-  <button type="button" (click)="downloadIco()">Download favicon.ico</button>
+  <app-canvas-preview (layersResolved)="onLayersResolved($event)" />
+  <button type="button" [disabled]="!currentLayers()" (click)="downloadIco()">Download favicon.ico</button>
 </main>

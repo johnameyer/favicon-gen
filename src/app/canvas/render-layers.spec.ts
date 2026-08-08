@@ -1,5 +1,5 @@
 import { renderLayersToCanvas } from './render-layers';
-import { createDefaultLayers } from './canvas-preview';
+import { buildPlaceholderLayers } from './canvas-preview';
 
 describe('renderLayersToCanvas', () => {
   it('creates an off-screen canvas sized to the requested dimension', async () => {
@@ -7,7 +7,7 @@ describe('renderLayersToCanvas', () => {
     // null), so this only exercises the canvas-creation/sizing contract, not
     // actual pixel drawing — see canvas-preview.spec.ts for the same pattern.
     // Real drawing is covered by the Playwright e2e suite in a real browser.
-    const canvas = await renderLayersToCanvas(createDefaultLayers(), 32);
+    const canvas = await renderLayersToCanvas(buildPlaceholderLayers('<svg></svg>'), 32);
     expect(canvas).toBeInstanceOf(HTMLCanvasElement);
     expect(canvas.width).toBe(32);
     expect(canvas.height).toBe(32);

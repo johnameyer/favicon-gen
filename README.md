@@ -8,9 +8,9 @@ Under incremental development. Built so far:
 
 - Layer-based canvas preview (`src/app/canvas/`) — the canvas is modeled as a stack of `Layer` objects (`src/app/models/layer.ts`), each with its own SVG source and transform, so future features like multi-emoji compositing and per-layer recoloring can slot in without a rewrite.
 - `favicon.ico` download (`src/app/export/`) — a hand-rolled ICO encoder (no dependency) renders the current layer stack at 16/32/48px and bundles them into a real multi-resolution `.ico` file, downloaded client-side.
-- Currently seeded with a single hardcoded placeholder emoji; dynamic emoji fetching, search/picker UI, and custom SVG upload are not yet built.
+- The placeholder emoji (😀 U+1F600) now loads asynchronously from the Noto Emoji CDN mirror on jsDelivr (`src/app/canvas/emoji-source.service.ts`), with a loading/error state shown in the preview while the fetch is in flight. It's still a single fixed emoji — no picker/search UI or codepoint-driven fetching yet.
 
-Planned next: PNG set + manifest export, zip bundling, CDN-backed emoji picker (Noto Emoji via jsDelivr), SVG upload/paste.
+Planned next: PNG set + manifest export, zip bundling, emoji picker/search UI, SVG upload/paste.
 
 ## Development server
 

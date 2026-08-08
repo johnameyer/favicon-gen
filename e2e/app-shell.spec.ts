@@ -10,6 +10,12 @@ test('app shell loads', async ({ page }) => {
 test('canvas preview renders', async ({ page }) => {
   await page.goto('/');
 
+  // The placeholder emoji is fetched from a CDN over the real network, so
+  // wait for the loading indicator to appear and then disappear before
+  // checking the canvas contents.
+  const loading = page.locator('[data-testid="canvas-preview-loading"]');
+  await expect(loading).toBeHidden({ timeout: 15000 });
+
   const canvas = page.locator('app-canvas-preview canvas');
   await expect(canvas).toBeVisible();
 

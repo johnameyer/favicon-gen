@@ -1,14 +1,23 @@
-import { AfterViewInit, Component, ElementRef, input, viewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { IDENTITY_TRANSFORM, Layer } from '../models/layer';
-import { EMOJI_PLACEHOLDER_SVG } from './emoji-placeholder';
+import { EmojiSourceService } from './emoji-source.service';
 import { renderLayersToCanvas } from './render-layers';
 
-/** Default seed layer stack: a single centered emoji, used until an editor exists. */
-export function createDefaultLayers(): Layer[] {
+/** Wraps fetched emoji SVG markup in the single-layer stack shape the canvas expects. */
+export function buildPlaceholderLayers(svgMarkup: string): Layer[] {
   return [
     {
       id: 'placeholder-emoji',
-      svgMarkup: EMOJI_PLACEHOLDER_SVG,
+      svgMarkup,
       transform: { ...IDENTITY_TRANSFORM },
     },
   ];
@@ -16,30 +25,80 @@ export function createDefaultLayers(): Layer[] {
 
 export const CANVAS_SIZE = 256;
 
+type PreviewStatus = 'loading' | 'loaded' | 'error';
+
 @Component({
   selector: 'app-canvas-preview',
-  template: `<canvas #canvas [width]="size" [height]="size" class="canvas-preview"></canvas>`,
+  template: `
+    @if (status() === 'loading') {
+      <p class="canvas-preview-status" data-testid="canvas-preview-loading">Loading…</p>
+    }
+    @if (status() === 'error') {
+      <p class="canvas-preview-status canvas-preview-status--error" data-testid="canvas-preview-error">
+        Failed to load emoji
+      </p>
+    }
+    <canvas
+      #canvas
+      [width]="size"
+      [height]="size"
+      class="canvas-preview"
+      [class.canvas-preview--hidden]="status() !== 'loaded'"
+    ></canvas>
+  `,
   styleUrl: './canvas-preview.scss',
 })
 export class CanvasPreview implements AfterViewInit {
-  readonly layers = input<Layer[]>(createDefaultLayers());
+  /**
+   * Optional explicit layer stack. When provided, this overrides the default
+   * placeholder-emoji CDN fetch entirely (used by future pickers/upload
+   * flows). When omitted, the component fetches the placeholder emoji itself.
+   */
+  readonly layers = input<Layer[] | undefined>(undefined);
   readonly size = CANVAS_SIZE;
 
+  /** Emits the resolved layer stack (explicit input or fetched placeholder) once it's ready to render. */
+  readonly layersResolved = output<Layer[]>();
+
+  readonly status = signal<PreviewStatus>('loading');
+
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
+  private readonly emojiSource = inject(EmojiSourceService);
 
   ngAfterViewInit(): void {
-    void this.render();
+    void this.init();
+  }
+
+  private async init(): Promise<void> {
+    const explicitLayers = this.layers();
+    if (explicitLayers) {
+      this.status.set('loaded');
+      this.layersResolved.emit(explicitLayers);
+      await this.render(explicitLayers);
+      return;
+    }
+
+    this.status.set('loading');
+    try {
+      const svgMarkup = await this.emojiSource.fetchPlaceholderEmoji();
+      const layers = buildPlaceholderLayers(svgMarkup);
+      this.status.set('loaded');
+      this.layersResolved.emit(layers);
+      await this.render(layers);
+    } catch {
+      this.status.set('error');
+    }
   }
 
   /** Renders the full layer stack onto the canvas, bottom layer first. */
-  async render(): Promise<void> {
+  async render(layers: Layer[]): Promise<void> {
     const canvas = this.canvasRef().nativeElement;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       return;
     }
 
-    const rendered = await renderLayersToCanvas(this.layers(), this.size);
+    const rendered = await renderLayersToCanvas(layers, this.size);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(rendered, 0, 0);
   }
