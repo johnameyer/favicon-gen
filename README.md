@@ -57,6 +57,12 @@ ng e2e
 ng lint
 ```
 
+## Deployment
+
+Pushes to `main` deploy to GitHub Pages at `https://johnameyer.github.io/favicon-gen/` via `.github/workflows/pages.yml`, using GitHub's native Pages deployment (`actions/configure-pages`/`upload-pages-artifact`/`deploy-pages` — no `gh-pages` branch, no force-pushing). Requires the repo's Pages source set to "GitHub Actions" (Settings → Pages) — a one-time manual step, not something the workflow can do itself.
+
+`.github/workflows/ci.yml` runs on every push: a `lint` job, and a `build-and-test` job (production build, unit tests, Playwright e2e across all three configured browsers). Build output and the Playwright HTML report are uploaded as workflow artifacts for inspection. Not gated together with the Pages deploy — matches this project's separate build/deploy workflow convention.
+
 ## Additional Resources
 
 For more on the Angular CLI, see the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli).
