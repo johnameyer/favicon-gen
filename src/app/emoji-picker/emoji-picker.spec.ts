@@ -62,6 +62,41 @@ describe('EmojiPicker', () => {
     ).toBeTruthy();
   });
 
+  it('shows a hover popover with the name and synonyms when an item is focused/hovered', () => {
+    const fixture = TestBed.createComponent(EmojiPicker);
+    fixture.detectChanges();
+
+    setSearch(fixture, 'grinning_face');
+
+    expect(fixture.nativeElement.querySelector('[data-testid="emoji-picker-popover"]')).toBeNull();
+
+    const button = fixture.nativeElement.querySelector('.emoji-picker-item') as HTMLButtonElement;
+    button.dispatchEvent(new Event('mouseenter'));
+    fixture.detectChanges();
+
+    const popoverName = fixture.nativeElement.querySelector('.emoji-picker-popover-name') as HTMLElement;
+    const popoverSynonyms = fixture.nativeElement.querySelector(
+      '.emoji-picker-popover-synonyms',
+    ) as HTMLElement;
+
+    expect(popoverName.textContent).toBe('grinning face');
+    expect(popoverSynonyms.textContent).toContain('face');
+
+    button.dispatchEvent(new Event('mouseleave'));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="emoji-picker-popover"]')).toBeNull();
+  });
+
+  it('entrySynonyms returns null when an entry has no keywords beyond its primary name', () => {
+    const fixture = TestBed.createComponent(EmojiPicker);
+    fixture.detectChanges();
+
+    expect(
+      fixture.componentInstance.entrySynonyms({ emoji: '🙂', keywords: ['slightly_smiling_face'], codepoints: '1f642' }),
+    ).toBeNull();
+  });
+
   it('emits emojiSelected with emoji/codepoints/name when an item is clicked', () => {
     const fixture = TestBed.createComponent(EmojiPicker);
     fixture.detectChanges();
