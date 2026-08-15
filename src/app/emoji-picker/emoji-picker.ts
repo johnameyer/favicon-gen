@@ -12,6 +12,25 @@ export interface EmojiSelection {
 /** Number of results shown when the search input is empty. */
 const EMPTY_SEARCH_RESULT_LIMIT = 60;
 
+/**
+ * Default results shown before the user types anything. `EMOJI_CATALOG` is
+ * ordered by emojilib's underlying Unicode grouping, which starts with
+ * Smileys & Emotion - taking a plain slice(0, N) would show nothing but
+ * faces. Sampling at a fixed stride across the whole catalog instead gives
+ * a representative spread (objects, animals, food, etc.) without needing
+ * any category metadata (which the catalog doesn't have) or hand-curation.
+ */
+function buildDefaultResults(): EmojiCatalogEntry[] {
+  const stride = Math.max(1, Math.floor(EMOJI_CATALOG.length / EMPTY_SEARCH_RESULT_LIMIT));
+  const result: EmojiCatalogEntry[] = [];
+  for (let i = 0; i < EMOJI_CATALOG.length && result.length < EMPTY_SEARCH_RESULT_LIMIT; i += stride) {
+    result.push(EMOJI_CATALOG[i]);
+  }
+  return result;
+}
+
+const DEFAULT_RESULTS = buildDefaultResults();
+
 @Component({
   selector: 'app-emoji-picker',
   template: `
@@ -60,7 +79,7 @@ export class EmojiPicker {
   readonly results = computed<EmojiCatalogEntry[]>(() => {
     const term = this.query().trim().toLowerCase();
     if (!term) {
-      return EMOJI_CATALOG.slice(0, EMPTY_SEARCH_RESULT_LIMIT);
+      return DEFAULT_RESULTS;
     }
     return EMOJI_CATALOG.filter((entry) =>
       entry.keywords.some((keyword) => keyword.toLowerCase().includes(term)),
