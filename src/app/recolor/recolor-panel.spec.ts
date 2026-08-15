@@ -107,4 +107,139 @@ describe('RecolorPanel', () => {
     expect(emitted[emitted.length - 1]).toEqual({});
     expect(fixture.componentInstance.currentColorFor(redGroup)).toBe('#F92612');
   });
+
+  describe('per-member overrides', () => {
+    it('toggling expanded state shows/hides per-member controls', () => {
+      const fixture = create();
+      const redGroup = fixture.componentInstance.groups().find((g) => g.colors.includes('#F92612'))!;
+      expect(fixture.componentInstance.expandedGroups().has(redGroup.id)).toBe(false);
+
+      fixture.componentInstance.toggleExpanded(redGroup.id);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.expandedGroups().has(redGroup.id)).toBe(true);
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="recolor-member"]').length).toBe(
+        redGroup.colors.length,
+      );
+
+      fixture.componentInstance.toggleExpanded(redGroup.id);
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="recolor-member"]').length).toBe(0);
+    });
+
+    it('an individual member override changes just that member emitted color, independent of the group picker', () => {
+      const fixture = create();
+      const emitted: Record<string, string>[] = [];
+      fixture.componentInstance.colorsChanged.subscribe((v: Record<string, string>) => emitted.push(v));
+
+      const redGroup = fixture.componentInstance.groups().find((g) => g.colors.includes('#F92612'))!;
+      fixture.componentInstance.onColorPicked(redGroup, { target: { value: '#0000ff' } } as unknown as Event);
+      fixture.componentInstance.onMemberColorPicked('#D70617', { target: { value: '#123456' } } as unknown as Event);
+
+      const last = emitted[emitted.length - 1];
+      expect(last['#D70617']).toBe('#123456');
+      // group picker's computed value for the dominant color is unaffected
+      expect(last['#F92612']).toBe('#0000FF');
+    });
+
+    it('an individual override works even without a group-level pick', () => {
+      const fixture = create();
+      const emitted: Record<string, string>[] = [];
+      fixture.componentInstance.colorsChanged.subscribe((v: Record<string, string>) => emitted.push(v));
+
+      fixture.componentInstance.onMemberColorPicked('#D70617', { target: { value: '#123456' } } as unknown as Event);
+
+      const last = emitted[emitted.length - 1];
+      expect(last['#D70617']).toBe('#123456');
+      expect(last['#F92612']).toBeUndefined();
+    });
+
+    it('clearing a member override reverts it to the group-computed value', () => {
+      const fixture = create();
+      const emitted: Record<string, string>[] = [];
+      fixture.componentInstance.colorsChanged.subscribe((v: Record<string, string>) => emitted.push(v));
+
+      const redGroup = fixture.componentInstance.groups().find((g) => g.colors.includes('#F92612'))!;
+      fixture.componentInstance.onColorPicked(redGroup, { target: { value: '#0000ff' } } as unknown as Event);
+      fixture.componentInstance.onMemberColorPicked('#D70617', { target: { value: '#123456' } } as unknown as Event);
+
+      const groupComputed = emitted[0]['#D70617']; // from the group-level pick alone
+      fixture.componentInstance.clearMemberOverride('#D70617');
+
+      const last = emitted[emitted.length - 1];
+      expect(last['#D70617']).toBe(groupComputed);
+    });
+
+    it('clearing a member override reverts to unchanged when the group itself has no chosen color', () => {
+      const fixture = create();
+      const emitted: Record<string, string>[] = [];
+      fixture.componentInstance.colorsChanged.subscribe((v: Record<string, string>) => emitted.push(v));
+
+      fixture.componentInstance.onMemberColorPicked('#D70617', { target: { value: '#123456' } } as unknown as Event);
+      fixture.componentInstance.clearMemberOverride('#D70617');
+
+      const last = emitted[emitted.length - 1];
+      expect(last['#D70617']).toBeUndefined();
+    });
+
+    it('reset clears both group-level picks and individual member overrides', () => {
+      const fixture = create();
+      const emitted: Record<string, string>[] = [];
+      fixture.componentInstance.colorsChanged.subscribe((v: Record<string, string>) => emitted.push(v));
+
+      const redGroup = fixture.componentInstance.groups().find((g) => g.colors.includes('#F92612'))!;
+      fixture.componentInstance.onColorPicked(redGroup, { target: { value: '#0000ff' } } as unknown as Event);
+      fixture.componentInstance.onMemberColorPicked('#D70617', { target: { value: '#123456' } } as unknown as Event);
+
+      fixture.componentInstance.reset();
+
+      expect(emitted[emitted.length - 1]).toEqual({});
+      expect(fixture.componentInstance.memberOverrides()).toEqual({});
+    });
+
+    it('preserves member overrides across a split into single-color groups', () => {
+      const fixture = create();
+      const emitted: Record<string, string>[] = [];
+      fixture.componentInstance.colorsChanged.subscribe((v: Record<string, string>) => emitted.push(v));
+
+      const redGroup = fixture.componentInstance.groups().find((g) => g.colors.includes('#F92612'))!;
+      fixture.componentInstance.onMemberColorPicked('#D70617', { target: { value: '#123456' } } as unknown as Event);
+
+      fixture.componentInstance.split(redGroup);
+
+      const last = emitted[emitted.length - 1];
+      expect(last['#D70617']).toBe('#123456');
+    });
+
+    it('preserves member overrides across a merge', () => {
+      const fixture = create();
+      const emitted: Record<string, string>[] = [];
+      fixture.componentInstance.colorsChanged.subscribe((v: Record<string, string>) => emitted.push(v));
+
+      fixture.componentInstance.onMemberColorPicked('#D70617', { target: { value: '#123456' } } as unknown as Event);
+
+      const groupsBefore = fixture.componentInstance.groups();
+      for (const g of groupsBefore) {
+        fixture.componentInstance.toggleSelected(g.id);
+      }
+      fixture.componentInstance.mergeSelected();
+
+      const last = emitted[emitted.length - 1];
+      expect(last['#D70617']).toBe('#123456');
+    });
+  });
+
+  it('keeps a gradient\'s stops in one group by construction, even across a wide hue span', () => {
+    const gradientSvg = `<svg xmlns="http://www.w3.org/2000/svg">
+      <radialGradient id="SVGID_1_" cx="24" cy="20" r="15">
+        <stop offset="0.3" style="stop-color:#FF9800"/>
+        <stop offset="0.6" style="stop-color:#FF6D00"/>
+        <stop offset="1" style="stop-color:#F44336"/>
+      </radialGradient>
+      <path style="fill:url(#SVGID_1_);" d="M0,0z"/>
+    </svg>`;
+    const fixture = create(gradientSvg);
+    const groups = fixture.componentInstance.groups();
+    expect(groups.length).toBe(1);
+    expect(groups[0].colors).toEqual(expect.arrayContaining(['#FF9800', '#FF6D00', '#F44336']));
+  });
 });

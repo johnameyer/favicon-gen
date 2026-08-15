@@ -22,50 +22,126 @@ const HEX_COLOR_RE = /#[0-9a-fA-F]{3,8}\b/g;
 const NON_COLOR_VALUES = new Set(['none', 'transparent', 'currentcolor']);
 
 /**
- * Extracts every distinct color used in `fill`/`stroke` attributes and their
- * inline `style="..."` equivalents from SVG markup, in first-encountered
- * order. Colors are normalized to uppercase 6-digit hex; non-hex values
- * (named colors, `url(#...)`, `none`, `currentColor`, etc.) are ignored, as
- * are duplicates and short (#RGB) forms are expanded.
+ * The output of `extractColorGroups`: gradient-owned color groups kept
+ * separate from ungrouped flat colors, so that gradient-aware callers (see
+ * `groupExtractedColors`) can treat each gradient's stops as one atomic
+ * unit instead of flattening everything into a single list.
  */
-export function extractColors(svgMarkup: string): string[] {
+export interface ExtractedColors {
+  /** One entry per gradient, colors in document (stop) order. */
+  gradientGroups: string[][];
+  /** Non-gradient `fill`/`stroke` colors, in first-seen document order. */
+  flatColors: string[];
+}
+
+/**
+ * Extracts every distinct color used in `fill`/`stroke` attributes (and
+ * their inline `style="..."` equivalents) from SVG markup, keeping colors
+ * that belong to the same `<linearGradient>`/`<radialGradient>` grouped
+ * together instead of flattened into one list. Colors are normalized to
+ * uppercase 6-digit hex; non-hex values (named colors, `url(#...)`, `none`,
+ * `currentColor`, etc.) are ignored, as are duplicates, and short (#RGB)
+ * forms are expanded.
+ *
+ * Gradient stops matter because many Noto emoji (most faces, plus some
+ * "glowing" subjects like sun/moon/fire) define their color entirely via
+ * `<radialGradient>`/`<linearGradient>` `<stop>` children rather than a flat
+ * `fill="#hex"` - without this, those SVGs would show zero recolorable
+ * swatches.
+ *
+ * Real Noto gradients frequently span far more hue distance than any fixed
+ * clustering threshold could reasonably accommodate (e.g. the birthday-cake
+ * emoji's frosting gradients go pink->orange->yellow across ~64° of hue) -
+ * because a gradient's stops are, by construction, one continuous visual
+ * material regardless of how far their colors drift. The SVG itself already
+ * unambiguously declares this via shared parentage, so gradient stops are
+ * extracted here as pre-formed groups that `groupExtractedColors` can treat
+ * as atomic, bypassing hue/saturation/lightness clustering for their own
+ * internal members entirely.
+ *
+ * Returns two lists:
+ *  - `gradientGroups`: one entry per `<linearGradient>`/`<radialGradient>`
+ *    with at least one resolved stop color, colors in document (stop) order
+ *    - so `colors[0]` is a reasonable "dominant" pick, consistent with the
+ *    `group.colors[0]` convention used elsewhere (see `recolorGroup`).
+ *  - `flatColors`: every other color found via `fill`/`stroke` (attribute +
+ *    style forms) on non-`<stop>` elements that isn't already captured as a
+ *    gradient stop, in first-seen document order.
+ */
+export function extractColorGroups(svgMarkup: string): ExtractedColors {
   const doc = new DOMParser().parseFromString(svgMarkup, 'image/svg+xml');
   if (doc.querySelector('parsererror')) {
-    return [];
+    return { gradientGroups: [], flatColors: [] };
   }
 
-  const seen = new Set<string>();
-  const result: string[] = [];
+  const addStyleProps = (style: string | null, propNames: string[], out: (value: string) => void): void => {
+    if (!style) {
+      return;
+    }
+    for (const prop of style.split(';')) {
+      const [name, value] = prop.split(':').map((part) => part.trim());
+      if (name && propNames.includes(name) && value) {
+        out(value);
+      }
+    }
+  };
 
-  const addCandidate = (raw: string | null): void => {
+  const stopOwnedColors = new Set<string>();
+  const gradientGroups: string[][] = [];
+
+  const gradients = doc.querySelectorAll('linearGradient, radialGradient');
+  for (const gradient of Array.from(gradients)) {
+    const seen = new Set<string>();
+    const groupColors: string[] = [];
+    const addCandidate = (raw: string | null): void => {
+      if (!raw) {
+        return;
+      }
+      const hex = normalizeColor(raw.trim());
+      if (!hex || seen.has(hex)) {
+        return;
+      }
+      seen.add(hex);
+      groupColors.push(hex);
+      stopOwnedColors.add(hex);
+    };
+
+    const stops = gradient.querySelectorAll('stop');
+    for (const stop of Array.from(stops)) {
+      addCandidate(stop.getAttribute('stop-color'));
+      addStyleProps(stop.getAttribute('style'), ['stop-color'], addCandidate);
+    }
+
+    if (groupColors.length > 0) {
+      gradientGroups.push(groupColors);
+    }
+  }
+
+  const flatSeen = new Set<string>();
+  const flatColors: string[] = [];
+  const addFlatCandidate = (raw: string | null): void => {
     if (!raw) {
       return;
     }
     const hex = normalizeColor(raw.trim());
-    if (!hex || seen.has(hex)) {
+    if (!hex || flatSeen.has(hex) || stopOwnedColors.has(hex)) {
       return;
     }
-    seen.add(hex);
-    result.push(hex);
+    flatSeen.add(hex);
+    flatColors.push(hex);
   };
 
   const elements = doc.querySelectorAll('*');
   for (const el of Array.from(elements)) {
-    addCandidate(el.getAttribute('fill'));
-    addCandidate(el.getAttribute('stroke'));
-
-    const style = el.getAttribute('style');
-    if (style) {
-      for (const prop of style.split(';')) {
-        const [name, value] = prop.split(':').map((part) => part.trim());
-        if ((name === 'fill' || name === 'stroke') && value) {
-          addCandidate(value);
-        }
-      }
+    if (el.tagName.toLowerCase() === 'stop') {
+      continue;
     }
+    addFlatCandidate(el.getAttribute('fill'));
+    addFlatCandidate(el.getAttribute('stroke'));
+    addStyleProps(el.getAttribute('style'), ['fill', 'stroke'], addFlatCandidate);
   }
 
-  return result;
+  return { gradientGroups, flatColors };
 }
 
 /** Normalizes a CSS color value to uppercase `#RRGGBB`, or null if it isn't a plain hex color. */
@@ -160,6 +236,19 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/** Removes duplicate hex values, preserving first-seen order. */
+function dedupe(colors: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const color of colors) {
+    if (!seen.has(color)) {
+      seen.add(color);
+      result.push(color);
+    }
+  }
+  return result;
+}
+
 /** Shortest-path circular distance between two hue angles in degrees, in [0, 180]. */
 function hueDistanceBetween(a: number, b: number): number {
   const diff = Math.abs(a - b) % 360;
@@ -171,52 +260,101 @@ export interface GroupColorsOptions {
   satThreshold?: number;
   /** Maximum hue distance (degrees) between adjacent colors to be chained into the same group. Default 11. */
   hueDistance?: number;
+  /** Minimum lightness (%) required for a color to participate in hue clustering. Default 20. */
+  minLightness?: number;
+  /** Maximum lightness (%) required for a color to participate in hue clustering. Default 90. */
+  maxLightness?: number;
 }
 
 /**
- * Groups colors into suggested "families" by hue proximity, gated by
- * saturation to avoid pulling achromatic grays/whites/blacks (whose hue is
- * numerically unstable/meaningless) into an unrelated hue cluster.
+ * An atomic unit fed into the hue-chaining algorithm: either a single flat
+ * color, or a whole pre-formed gradient (all of one `<linearGradient>`'s /
+ * `<radialGradient>'s `<stop>` colors), represented for clustering purposes
+ * by `hsl` (by convention, the hue/sat/lightness of `colors[0]`, the
+ * "dominant" stop - see `recolorGroup`'s doc comment for the same
+ * convention applied at recolor time).
+ */
+interface ColorUnit {
+  colors: string[];
+  hsl: Hsl;
+}
+
+/**
+ * Groups color units into suggested "families" by hue proximity, gated by
+ * saturation and lightness to avoid pulling achromatic grays/whites/blacks
+ * (whose hue is numerically unstable/meaningless), or colors at extreme
+ * lightness (whose hue is well-defined but which function as "ink"/"highlight"
+ * accents rather than a genuine material family), into an unrelated hue
+ * cluster.
  *
- * Colors below `satThreshold` are never hue-clustered - each becomes its own
- * single-color group. Colors at/above the threshold are sorted by hue and
- * chained (single-linkage) into a group whenever adjacent hues are within
- * `hueDistance` of each other, including wraparound across 0/360.
+ * Units below `satThreshold`, or with lightness below `minLightness` or
+ * above `maxLightness` (checked against the unit's representative `hsl`),
+ * are never hue-clustered - each becomes its own single-unit group. This is
+ * deliberately a simple "achromatic-or-extreme" gate: gated units are *not*
+ * clustered among themselves here, even if several of them share a hue
+ * (that's an intentionally separate, unscoped follow-up).
+ *
+ * The lightness gate matters because saturation and lightness are
+ * independent axes: a color can be dark (or near-white) *and* well-saturated
+ * at the same time - e.g. a near-black "ink" outline color used for eyes and
+ * mouth lines can have a perfectly legitimate, non-trivial hue despite being
+ * essentially a shadow/outline accent rather than part of a face's skin-tone
+ * family. Without this gate, single-linkage hue-chaining can bridge such an
+ * extreme through a chain of intermediate mid-tone colors (e.g. mouth
+ * shading/fill) all the way to an unrelated bright color family (e.g. a
+ * face's yellow skin gradient), merging visually and semantically unrelated
+ * elements into one group purely because every adjacent step in the sorted
+ * hue chain happens to be within `hueDistance`.
+ *
+ * Units passing both gates are sorted by hue and chained (single-linkage)
+ * into a group whenever adjacent hues are within `hueDistance` of each
+ * other, including wraparound across 0/360.
+ *
+ * This is the shared engine behind `groupExtractedColors`, generalized to
+ * operate on pre-formed "units" rather than bare colors, so that a
+ * gradient's stops (which must *always* stay together, unconditionally -
+ * see `extractColorGroups`) can be threaded through the exact same
+ * single-linkage hue-chaining algorithm used for individual flat colors,
+ * participating in cross-group merges via their representative `hsl` while
+ * keeping all of their member colors bundled as one indivisible unit
+ * whenever they do merge with something.
  *
  * This is a *suggestion*: callers (the recolor panel) let users split or
  * merge groups afterward, since a fixed threshold can't perfectly separate
  * every case (e.g. adjacent-hue but semantically distinct materials).
  */
-export function groupColorsByHue(colors: string[], options?: GroupColorsOptions): ColorGroup[] {
+function groupColorUnitsByHue(units: ColorUnit[], options?: GroupColorsOptions): ColorGroup[] {
   const satThreshold = options?.satThreshold ?? 15;
   const hueDistance = options?.hueDistance ?? 11;
+  const minLightness = options?.minLightness ?? 20;
+  const maxLightness = options?.maxLightness ?? 90;
 
-  const chromatic: { color: string; hsl: Hsl }[] = [];
+  const chromatic: ColorUnit[] = [];
   const groups: ColorGroup[] = [];
   let groupCounter = 0;
 
-  for (const color of colors) {
-    const hsl = hexToHsl(color);
-    if (hsl.s < satThreshold) {
-      groups.push({ id: `group-${groupCounter++}`, colors: [color] });
+  for (const unit of units) {
+    const { hsl } = unit;
+    if (hsl.s < satThreshold || hsl.l < minLightness || hsl.l > maxLightness) {
+      groups.push({ id: `group-${groupCounter++}`, colors: unit.colors });
     } else {
-      chromatic.push({ color, hsl });
+      chromatic.push(unit);
     }
   }
 
   chromatic.sort((a, b) => a.hsl.h - b.hsl.h);
 
-  const chromaticGroups: string[][] = [];
-  for (const { color, hsl } of chromatic) {
+  const chromaticGroups: ColorUnit[][] = [];
+  for (const unit of chromatic) {
     const lastGroup = chromaticGroups[chromaticGroups.length - 1];
     if (lastGroup) {
-      const lastColorHue = hexToHsl(lastGroup[lastGroup.length - 1]).h;
-      if (hueDistanceBetween(lastColorHue, hsl.h) <= hueDistance) {
-        lastGroup.push(color);
+      const lastHue = lastGroup[lastGroup.length - 1].hsl.h;
+      if (hueDistanceBetween(lastHue, unit.hsl.h) <= hueDistance) {
+        lastGroup.push(unit);
         continue;
       }
     }
-    chromaticGroups.push([color]);
+    chromaticGroups.push([unit]);
   }
 
   // Check wraparound: merge the last chromatic group into the first if they're
@@ -224,19 +362,37 @@ export function groupColorsByHue(colors: string[], options?: GroupColorsOptions)
   if (chromaticGroups.length > 1) {
     const first = chromaticGroups[0];
     const last = chromaticGroups[chromaticGroups.length - 1];
-    const firstHue = hexToHsl(first[0]).h;
-    const lastHue = hexToHsl(last[last.length - 1]).h;
+    const firstHue = first[0].hsl.h;
+    const lastHue = last[last.length - 1].hsl.h;
     if (hueDistanceBetween(lastHue, firstHue) <= hueDistance) {
       chromaticGroups.pop();
       chromaticGroups[0] = [...last, ...first];
     }
   }
 
-  for (const groupColors of chromaticGroups) {
-    groups.push({ id: `group-${groupCounter++}`, colors: groupColors });
+  for (const groupUnits of chromaticGroups) {
+    groups.push({ id: `group-${groupCounter++}`, colors: dedupe(groupUnits.flatMap((u) => u.colors)) });
   }
 
   return groups;
+}
+
+/**
+ * Groups the output of `extractColorGroups` into suggested color
+ * "families": gradient pre-groups (`extracted.gradientGroups`) are threaded
+ * through `groupColorUnitsByHue` as atomic units - never split by this
+ * function, however far their own stops span in hue - while remaining
+ * eligible to hue-chain with other gradients or flat colors via their
+ * dominant (first) stop, exactly like any flat color would. This is the
+ * function `RecolorPanel` calls whenever gradient-awareness matters (i.e.
+ * always, for real SVG input).
+ */
+export function groupExtractedColors(extracted: ExtractedColors, options?: GroupColorsOptions): ColorGroup[] {
+  const units: ColorUnit[] = [
+    ...extracted.gradientGroups.map((colors) => ({ colors, hsl: hexToHsl(colors[0]) })),
+    ...extracted.flatColors.map((color) => ({ colors: [color], hsl: hexToHsl(color) })),
+  ];
+  return groupColorUnitsByHue(units, options);
 }
 
 /**
