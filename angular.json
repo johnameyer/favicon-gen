@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "favicon": {
+    "favicon-gen": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -60,10 +60,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "favicon:build:production"
+              "buildTarget": "favicon-gen:build:production"
             },
             "development": {
-              "buildTarget": "favicon:build:development"
+              "buildTarget": "favicon-gen:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -80,11 +80,11 @@
         "e2e": {
           "builder": "playwright-ng-schematics:playwright",
           "options": {
-            "devServerTarget": "favicon:serve"
+            "devServerTarget": "favicon-gen:serve"
           },
           "configurations": {
             "production": {
-              "devServerTarget": "favicon:serve:production"
+              "devServerTarget": "favicon-gen:serve:production"
             }
           }
         }
