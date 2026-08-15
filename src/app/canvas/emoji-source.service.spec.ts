@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { EmojiSourceService, emojiToCodepoints } from './emoji-source.service';
+import { EmojiSourceService, emojiToCodepoints, resolveEmojiSvgUrl } from './emoji-source.service';
 
 describe('emojiToCodepoints', () => {
   it('converts a single-codepoint emoji', () => {
@@ -13,6 +13,51 @@ describe('emojiToCodepoints', () => {
 
   it('strips variation selector-16 (U+FE0F)', () => {
     expect(emojiToCodepoints('❤️')).toBe('2764');
+  });
+});
+
+describe('resolveEmojiSvgUrl', () => {
+  it('routes a regional-indicator country flag (🇺🇸) to region-flags/svg/US.svg', () => {
+    expect(resolveEmojiSvgUrl(emojiToCodepoints('🇺🇸'))).toBe(
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/third_party/region-flags/svg/US.svg',
+    );
+  });
+
+  it('routes a regional-indicator country flag (🇫🇷) to region-flags/svg/FR.svg', () => {
+    expect(resolveEmojiSvgUrl(emojiToCodepoints('🇫🇷'))).toBe(
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/third_party/region-flags/svg/FR.svg',
+    );
+  });
+
+  it('routes a tag-sequence subdivision flag (England) to region-flags/svg/GB-ENG.svg', () => {
+    // Black flag base + tag chars spelling "gbeng" + terminator.
+    expect(resolveEmojiSvgUrl('1f3f4_e0067_e0062_e0065_e006e_e0067_e007f')).toBe(
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/third_party/region-flags/svg/GB-ENG.svg',
+    );
+  });
+
+  it('routes a tag-sequence subdivision flag (Scotland) to region-flags/svg/GB-SCT.svg', () => {
+    expect(resolveEmojiSvgUrl('1f3f4_e0067_e0062_e0073_e0063_e0074_e007f')).toBe(
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/third_party/region-flags/svg/GB-SCT.svg',
+    );
+  });
+
+  it('leaves a normal single-codepoint emoji on the standard svg path', () => {
+    expect(resolveEmojiSvgUrl('1f600')).toBe(
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f600.svg',
+    );
+  });
+
+  it('leaves a non-flag multi-codepoint ZWJ sequence (family) on the standard svg path', () => {
+    expect(resolveEmojiSvgUrl('1f468_200d_1f469_200d_1f467')).toBe(
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f468_200d_1f469_200d_1f467.svg',
+    );
+  });
+
+  it('leaves a simple flag symbol (chequered flag, single codepoint) on the standard svg path', () => {
+    expect(resolveEmojiSvgUrl('1f3c1')).toBe(
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f3c1.svg',
+    );
   });
 });
 

@@ -47,3 +47,11 @@
   width: 1.75rem;
   height: 1.75rem;
 }
+
+.emoji-picker-thumb--broken {
+  /* A failed thumbnail fetch (e.g. an emoji with no resolvable Noto asset)
+     hides the raw browser broken-image icon in favor of a plain placeholder box. */
+  opacity: 0;
+  background: #eee;
+  border-radius: 4px;
+}

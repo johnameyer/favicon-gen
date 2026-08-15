@@ -36,6 +36,9 @@
   @if (selectionLoading()) {
     <p data-testid="selection-loading">Loading selected emoji…</p>
   }
+  @if (selectionError()) {
+    <p class="selection-error" data-testid="selection-error">{{ selectionError() }}</p>
+  }
   <app-canvas-preview [layers]="selectedLayers()" (layersResolved)="onLayersResolved($event)" />
 
   @if (currentLayers()) {

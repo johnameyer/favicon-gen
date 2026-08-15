@@ -1,4 +1,5 @@
 import { Component, computed, output, signal } from '@angular/core';
+import { resolveEmojiSvgUrl } from '../canvas/emoji-source.service';
 import { EMOJI_CATALOG, EmojiCatalogEntry } from './emoji-catalog';
 
 /** Payload emitted when the user selects an emoji from the picker. */
@@ -31,15 +32,16 @@ const EMPTY_SEARCH_RESULT_LIMIT = 60;
             <button
               type="button"
               class="emoji-picker-item"
-              [title]="entry.name"
-              [attr.aria-label]="entry.name"
+              [title]="entryLabel(entry)"
+              [attr.aria-label]="entryLabel(entry)"
               (click)="select(entry)"
             >
               <img
                 [src]="thumbnailUrl(entry)"
-                [alt]="entry.name"
+                [alt]="entryLabel(entry)"
                 loading="lazy"
                 class="emoji-picker-thumb"
+                (error)="onThumbnailError($event)"
               />
             </button>
           }
@@ -60,8 +62,8 @@ export class EmojiPicker {
     if (!term) {
       return EMOJI_CATALOG.slice(0, EMPTY_SEARCH_RESULT_LIMIT);
     }
-    return EMOJI_CATALOG.filter(
-      (entry) => entry.name.toLowerCase().includes(term) || entry.slug.toLowerCase().includes(term),
+    return EMOJI_CATALOG.filter((entry) =>
+      entry.keywords.some((keyword) => keyword.toLowerCase().includes(term)),
     );
   });
 
@@ -69,11 +71,26 @@ export class EmojiPicker {
     this.query.set((event.target as HTMLInputElement).value);
   }
 
+  /** Human-readable label for an entry, derived from its first (most name-like) keyword. */
+  entryLabel(entry: EmojiCatalogEntry): string {
+    return (entry.keywords[0] ?? entry.emoji).replace(/_/g, ' ');
+  }
+
   thumbnailUrl(entry: EmojiCatalogEntry): string {
-    return `https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u${entry.codepoints}.svg`;
+    return resolveEmojiSvgUrl(entry.codepoints);
+  }
+
+  /** Hides a thumbnail image that failed to load (e.g. an emoji with no resolvable asset). */
+  onThumbnailError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.classList.add('emoji-picker-thumb--broken');
   }
 
   select(entry: EmojiCatalogEntry): void {
-    this.emojiSelected.emit({ emoji: entry.emoji, codepoints: entry.codepoints, name: entry.name });
+    this.emojiSelected.emit({
+      emoji: entry.emoji,
+      codepoints: entry.codepoints,
+      name: this.entryLabel(entry),
+    });
   }
 }

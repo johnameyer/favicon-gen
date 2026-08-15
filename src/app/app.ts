@@ -39,6 +39,9 @@ export class App {
   /** True while fetching the SVG for a picker-driven selection. */
   readonly selectionLoading = signal(false);
 
+  /** User-visible message when a picker-driven emoji selection fails to load. */
+  readonly selectionError = signal<string | undefined>(undefined);
+
   /** Which export mode the download button uses: ICO-only or the full zip bundle. */
   readonly exportMode = signal<ExportMode>('bundle');
 
@@ -75,12 +78,14 @@ export class App {
 
   async onEmojiSelected(selection: EmojiSelection): Promise<void> {
     this.selectionLoading.set(true);
+    this.selectionError.set(undefined);
     try {
       const svgMarkup = await this.emojiSource.fetchEmoji(selection.codepoints);
       this.loadSvgAsCurrentSource(svgMarkup);
     } catch (error) {
       // Keep showing whatever was previously selected; just report the failure.
       console.error(`Failed to load emoji "${selection.name}":`, error);
+      this.selectionError.set(`Couldn't load "${selection.name}". Please try a different emoji.`);
     } finally {
       this.selectionLoading.set(false);
     }

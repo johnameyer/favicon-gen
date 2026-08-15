@@ -60,6 +60,22 @@ test('searching and selecting an emoji updates the canvas preview and download s
   expect(bytes.length).toBeGreaterThan(0);
 });
 
+test('searching "car" surfaces car emoji via keyword search', async ({ page }) => {
+  await page.goto('/');
+
+  const search = page.locator('[data-testid="emoji-picker-search"]');
+  await search.fill('car');
+
+  const grid = page.locator('[data-testid="emoji-picker-grid"]');
+  await expect(grid).toBeVisible();
+
+  const items = page.locator('.emoji-picker-item');
+  await expect(items).not.toHaveCount(0);
+
+  const emojiTexts = await items.evaluateAll((nodes) => nodes.map((n) => n.getAttribute('aria-label')));
+  expect(emojiTexts.some((label) => label?.toLowerCase().includes('automobile'))).toBe(true);
+});
+
 test('a search with no matches shows the empty state', async ({ page }) => {
   await page.goto('/');
 

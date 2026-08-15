@@ -19,10 +19,10 @@
     "@angular/forms": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
+    "emojilib": "^4.0.3",
     "fflate": "^0.8.3",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0",
-    "unicode-emoji-json": "^0.9.0"
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular-eslint/builder": "22.1.0",

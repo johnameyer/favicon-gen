@@ -23,24 +23,31 @@ describe('EmojiPicker', () => {
     expect(fixture.componentInstance.results().length).toBeGreaterThan(0);
   });
 
-  it('filters results by name, case-insensitively', () => {
+  it('filters results by keyword, case-insensitively', () => {
     const fixture = TestBed.createComponent(EmojiPicker);
     fixture.detectChanges();
 
-    setSearch(fixture, 'GRINNING FACE');
+    setSearch(fixture, 'GRINNING_FACE');
 
     const results = fixture.componentInstance.results();
     expect(results.length).toBeGreaterThan(0);
-    expect(results.every((entry) => entry.name.toLowerCase().includes('grinning face'))).toBe(true);
+    expect(
+      results.every((entry) =>
+        entry.keywords.some((keyword) => keyword.toLowerCase().includes('grinning_face')),
+      ),
+    ).toBe(true);
   });
 
-  it('filters results by slug', () => {
+  it('finds car-related emoji even when "car" is not a substring of the primary keyword', () => {
     const fixture = TestBed.createComponent(EmojiPicker);
     fixture.detectChanges();
 
-    setSearch(fixture, 'grinning_face');
+    setSearch(fixture, 'car');
 
-    expect(fixture.componentInstance.results().length).toBeGreaterThan(0);
+    const emojis = fixture.componentInstance.results().map((entry) => entry.emoji);
+    expect(emojis).toContain('🚗');
+    expect(emojis).toContain('🚙');
+    expect(emojis).toContain('🚕');
   });
 
   it('shows a no-results state for a query matching nothing', () => {
@@ -59,7 +66,7 @@ describe('EmojiPicker', () => {
     const fixture = TestBed.createComponent(EmojiPicker);
     fixture.detectChanges();
 
-    setSearch(fixture, 'grinning face');
+    setSearch(fixture, 'grinning_face');
 
     const emitted: unknown[] = [];
     fixture.componentInstance.emojiSelected.subscribe((event) => emitted.push(event));
