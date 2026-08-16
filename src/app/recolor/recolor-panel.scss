@@ -17,14 +17,15 @@
 .recolor-panel-reset {
   padding: 0.25rem 0.5rem;
   font-size: 0.85rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   background: none;
+  color: var(--color-text);
   cursor: pointer;
 
   &:hover,
   &:focus-visible {
-    background: #f5f5f5;
+    background: var(--color-surface-hover);
   }
 }
 
@@ -42,7 +43,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem;
-  border: 1px solid #eee;
+  border: 1px solid var(--color-border-subtle);
   border-radius: 6px;
 }
 
@@ -50,7 +51,7 @@
   width: 1.25rem;
   height: 1.25rem;
   border-radius: 4px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -58,7 +59,7 @@
   width: 2rem;
   height: 1.5rem;
   padding: 0;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   cursor: pointer;
 }
@@ -66,20 +67,21 @@
 .recolor-panel-count {
   flex: 1;
   font-size: 0.8rem;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .recolor-panel-split {
   padding: 0.2rem 0.4rem;
   font-size: 0.75rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   background: none;
+  color: var(--color-text);
   cursor: pointer;
 
   &:hover,
   &:focus-visible {
-    background: #f5f5f5;
+    background: var(--color-surface-hover);
   }
 }
 
@@ -126,21 +128,22 @@
 .recolor-panel-member-label {
   flex: 1;
   font-size: 0.75rem;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .recolor-panel-member-clear {
   padding: 0 0.3rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   background: none;
+  color: var(--color-text);
   cursor: pointer;
   font-size: 0.75rem;
   line-height: 1.2;
 
   &:hover,
   &:focus-visible {
-    background: #f5f5f5;
+    background: var(--color-surface-hover);
   }
 }
 
@@ -148,9 +151,10 @@
   align-self: flex-start;
   padding: 0.3rem 0.6rem;
   font-size: 0.85rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   background: none;
+  color: var(--color-text);
   cursor: pointer;
 
   &:disabled {
@@ -160,6 +164,6 @@
 
   &:not(:disabled):hover,
   &:not(:disabled):focus-visible {
-    background: #f5f5f5;
+    background: var(--color-surface-hover);
   }
 }

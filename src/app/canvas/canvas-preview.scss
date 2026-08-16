@@ -1,6 +1,6 @@
 .canvas-preview {
   display: block;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
 
   &--hidden {
@@ -10,8 +10,9 @@
 
 .canvas-preview-status {
   font-family: sans-serif;
+  color: var(--color-text);
 
   &--error {
-    color: #b00020;
+    color: var(--color-error);
   }
 }

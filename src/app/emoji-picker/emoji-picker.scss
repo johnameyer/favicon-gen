@@ -10,12 +10,14 @@
 .emoji-picker-search {
   padding: 0.5rem;
   font-size: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .emoji-picker-empty {
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .emoji-picker-grid {
@@ -38,8 +40,8 @@
 
   &:hover,
   &:focus-visible {
-    border-color: #ccc;
-    background: #f5f5f5;
+    border-color: var(--color-border);
+    background: var(--color-surface-hover);
   }
 }
 
@@ -59,8 +61,8 @@
   max-width: 12rem;
   padding: 0.35rem 0.5rem;
   border-radius: 6px;
-  background: #222;
-  color: #fff;
+  background: var(--color-popover-bg);
+  color: var(--color-popover-text);
   font-size: 0.7rem;
   line-height: 1.3;
   text-align: center;
@@ -74,7 +76,7 @@
 }
 
 .emoji-picker-popover-synonyms {
-  color: #ccc;
+  color: var(--color-popover-text-secondary);
 }
 
 .emoji-picker-thumb {
@@ -86,6 +88,6 @@
   /* A failed thumbnail fetch (e.g. an emoji with no resolvable Noto asset)
      hides the raw browser broken-image icon in favor of a plain placeholder box. */
   opacity: 0;
-  background: #eee;
+  background: var(--color-placeholder-bg);
   border-radius: 4px;
 }
