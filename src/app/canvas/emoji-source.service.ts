@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 
 /**
- * Default placeholder emoji codepoint fragment (Noto "grinning face", U+1F600).
+ * Default placeholder emoji codepoint fragment (Noto "rocket", U+1F680).
  */
-const DEFAULT_EMOJI_CODEPOINTS = '1f600';
+const DEFAULT_EMOJI_CODEPOINTS = '1f680';
 
 /**
  * jsDelivr base URL for googlefonts/noto-emoji, pinned to the commit of the
@@ -147,7 +147,7 @@ export class EmojiSourceService {
     return response.text();
   }
 
-  /** Fetches the placeholder emoji (U+1F600) SVG markup as text. */
+  /** Fetches the placeholder emoji (U+1F680 rocket) SVG markup as text. */
   fetchPlaceholderEmoji(): Promise<string> {
     return this.fetchEmoji(DEFAULT_EMOJI_CODEPOINTS);
   }

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { selectEmoji, waitForPreviewLoaded, waitForSelectionLoaded } from './helpers';
+import { selectEmoji, waitForPreviewLoaded } from './helpers';
 
 test('recoloring a color group updates the canvas preview and download still works', async ({ page }) => {
   await page.goto('/');
@@ -94,11 +94,7 @@ test('a gradient-based emoji (grinning face) shows its gradient colors as recolo
   // The grinning face's yellow skin is defined via a <radialGradient>/<stop
   // style="stop-color:...">, not a flat fill - this exercises the gradient
   // stop-color extraction path, not just plain fill/stroke.
-  const search = page.locator('[data-testid="emoji-picker-search"]');
-  await search.fill('grinning');
-  await expect(page.locator('[data-testid="emoji-picker-grid"]')).toBeVisible();
-  await page.locator('.emoji-picker-item').first().click();
-  await waitForSelectionLoaded(page);
+  await selectEmoji(page, 'grinning', 'grinning face');
 
   const groups = page.locator('[data-testid="recolor-group"]');
   await expect(groups.first()).toBeVisible({ timeout: 15000 });
@@ -112,6 +108,8 @@ test('a gradient-based emoji (grinning face) shows its gradient colors as recolo
   const expandCount = await expandButtons.count();
   for (let i = 0; i < expandCount; i++) {
     await expandButtons.nth(i).click();
+    // The panel can re-render a beat after the click (seen on Chromium).
+    await expect(expandButtons.nth(i)).toHaveAttribute('aria-expanded', 'true');
   }
 
   const memberLabels = await page.locator('[data-testid="recolor-member"]').allTextContents();

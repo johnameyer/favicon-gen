@@ -126,7 +126,7 @@ describe('EmojiSourceService', () => {
   });
 
   describe('fetchPlaceholderEmoji', () => {
-    it('fetches the default grinning-face codepoint', async () => {
+    it('fetches the default rocket codepoint', async () => {
       const svg = '<svg>mock emoji</svg>';
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -138,7 +138,7 @@ describe('EmojiSourceService', () => {
       const service = TestBed.inject(EmojiSourceService);
       await expect(service.fetchPlaceholderEmoji()).resolves.toBe(svg);
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/svg/emoji_u1f600.svg',
+        'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/svg/emoji_u1f680.svg',
       );
     });
   });
