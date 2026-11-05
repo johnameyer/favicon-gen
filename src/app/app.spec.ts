@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { App } from './app';
 import { EmojiSourceService } from './canvas/emoji-source.service';
 import { FaviconExportService } from './export/favicon-export.service';
+import { DEFAULT_BACKGROUND } from './background/background';
 
 describe('App', () => {
   let fetchEmoji: ReturnType<typeof vi.fn>;
@@ -126,7 +127,7 @@ describe('App', () => {
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
       const app = fixture.componentInstance;
-      app.background.set({ shape: 'circle', color: '#FF0000', contentScale: 0.68 });
+      app.background.set({ ...DEFAULT_BACKGROUND, shape: 'circle', color: '#FF0000' });
 
       app.onSvgUploaded('<svg>uploaded</svg>');
       expect(app.outputLayers()?.map((layer) => layer.id)).toEqual([
@@ -150,7 +151,7 @@ describe('App', () => {
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
       const app = fixture.componentInstance;
-      app.background.set({ shape: 'rounded-square', color: '#00FF00', contentScale: 0.68 });
+      app.background.set({ ...DEFAULT_BACKGROUND, shape: 'rounded-square', color: '#00FF00' });
 
       await app.download();
 

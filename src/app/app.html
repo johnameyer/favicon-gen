@@ -1,60 +1,68 @@
 <main class="main">
   <h1>Favicon Generator</h1>
 
-  <div class="source-tabs" role="tablist">
-    <button
-      type="button"
-      role="tab"
-      class="source-tab"
-      [class.active]="activeTab() === 'emoji'"
-      [attr.aria-selected]="activeTab() === 'emoji'"
-      (click)="setActiveTab('emoji')"
-      data-testid="tab-emoji"
-    >
-      Emoji
-    </button>
-    <button
-      type="button"
-      role="tab"
-      class="source-tab"
-      [class.active]="activeTab() === 'upload'"
-      [attr.aria-selected]="activeTab() === 'upload'"
-      (click)="setActiveTab('upload')"
-      data-testid="tab-upload"
-    >
-      Custom SVG
-    </button>
-    <button
-      type="button"
-      role="tab"
-      class="source-tab"
-      [class.active]="activeTab() === 'letter'"
-      [attr.aria-selected]="activeTab() === 'letter'"
-      (click)="setActiveTab('letter')"
-      data-testid="tab-letter"
-    >
-      Letter
-    </button>
+  <div class="controls">
+    <section class="source-column" aria-label="Source">
+      <div class="source-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          class="source-tab"
+          [class.active]="activeTab() === 'emoji'"
+          [attr.aria-selected]="activeTab() === 'emoji'"
+          (click)="setActiveTab('emoji')"
+          data-testid="tab-emoji"
+        >
+          Emoji
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="source-tab"
+          [class.active]="activeTab() === 'upload'"
+          [attr.aria-selected]="activeTab() === 'upload'"
+          (click)="setActiveTab('upload')"
+          data-testid="tab-upload"
+        >
+          Custom SVG
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="source-tab"
+          [class.active]="activeTab() === 'letter'"
+          [attr.aria-selected]="activeTab() === 'letter'"
+          (click)="setActiveTab('letter')"
+          data-testid="tab-letter"
+        >
+          Letter
+        </button>
+      </div>
+
+      @if (activeTab() === 'emoji') {
+        <app-emoji-picker (emojiSelected)="onEmojiSelected($event)" />
+      }
+      @if (activeTab() === 'upload') {
+        <app-svg-upload (svgSelected)="onSvgUploaded($event)" />
+      }
+      @if (activeTab() === 'letter') {
+        <app-letter-input (svgGenerated)="onLetterSvgGenerated($event)" />
+      }
+
+      @if (selectionLoading()) {
+        <p data-testid="selection-loading">Loading selected emoji…</p>
+      }
+      @if (selectionError()) {
+        <p class="selection-error" data-testid="selection-error">{{ selectionError() }}</p>
+      }
+    </section>
+
+    <section class="background-column" aria-labelledby="background-heading">
+      <h2 id="background-heading">Background</h2>
+      <app-background-picker [(background)]="background" />
+    </section>
   </div>
 
-  @if (activeTab() === 'emoji') {
-    <app-emoji-picker (emojiSelected)="onEmojiSelected($event)" />
-  }
-  @if (activeTab() === 'upload') {
-    <app-svg-upload (svgSelected)="onSvgUploaded($event)" />
-  }
-  @if (activeTab() === 'letter') {
-    <app-letter-input (svgGenerated)="onLetterSvgGenerated($event)" />
-  }
-
-  <app-background-picker [(background)]="background" />
-
-  @if (selectionLoading()) {
-    <p data-testid="selection-loading">Loading selected emoji…</p>
-  }
-  @if (selectionError()) {
-    <p class="selection-error" data-testid="selection-error">{{ selectionError() }}</p>
-  }
   <app-canvas-preview [layers]="outputLayers()" (layersResolved)="onLayersResolved($event)" />
 
   @if (selectedLayers() && !letterSourceActive()) {

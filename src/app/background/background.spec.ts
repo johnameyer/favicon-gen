@@ -21,11 +21,13 @@ const content: Layer[] = [
 describe('buildBackgroundSvg', () => {
   it('builds a valid SVG for each shape in the chosen color', () => {
     const circle = buildBackgroundSvg({
+      ...DEFAULT_BACKGROUND,
       shape: 'circle',
       color: '#123456',
       contentScale: DEFAULT_CONTENT_SCALE,
     });
     const square = buildBackgroundSvg({
+      ...DEFAULT_BACKGROUND,
       shape: 'rounded-square',
       color: '#123456',
       contentScale: DEFAULT_CONTENT_SCALE,
@@ -36,6 +38,52 @@ describe('buildBackgroundSvg', () => {
     }
     expect(circle).toContain('<circle');
     expect(square).toContain('<rect');
+  });
+
+  it("rounds the square's corners by the chosen radius", () => {
+    const sharp = buildBackgroundSvg({
+      ...DEFAULT_BACKGROUND,
+      shape: 'rounded-square',
+      cornerRadius: 0,
+    });
+    const round = buildBackgroundSvg({
+      ...DEFAULT_BACKGROUND,
+      shape: 'rounded-square',
+      cornerRadius: 50,
+    });
+    expect(sharp).toContain('rx="0"');
+    expect(round).toContain('rx="50"');
+  });
+
+  it('fills with a linear gradient between both colors at the chosen angle', () => {
+    const svg = buildBackgroundSvg({
+      ...DEFAULT_BACKGROUND,
+      shape: 'circle',
+      fill: 'linear',
+      color: '#111111',
+      color2: '#222222',
+      angle: 90,
+    });
+    expect(validateSvgMarkup(svg).ok).toBe(true);
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    const gradient = doc.querySelector('linearGradient')!;
+    // CSS convention: 90° runs left-to-right, the gradient's unrotated direction.
+    expect(gradient.getAttribute('gradientTransform')).toBe('rotate(0 0.5 0.5)');
+    expect([...gradient.querySelectorAll('stop')].map((s) => s.getAttribute('stop-color'))).toEqual(
+      ['#111111', '#222222'],
+    );
+    expect(doc.querySelector('circle')!.getAttribute('fill')).toBe(`url(#${gradient.id})`);
+  });
+
+  it('fills with a radial gradient from the center color out to the end color', () => {
+    const svg = buildBackgroundSvg({
+      ...DEFAULT_BACKGROUND,
+      shape: 'rounded-square',
+      fill: 'radial',
+    });
+    expect(validateSvgMarkup(svg).ok).toBe(true);
+    expect(svg).toContain('<radialGradient');
+    expect(svg).not.toContain('<linearGradient');
   });
 });
 
@@ -52,6 +100,7 @@ describe('withBackground', () => {
   it('returns the content unchanged with no background', () => {
     expect(
       withBackground(content, {
+        ...DEFAULT_BACKGROUND,
         shape: 'none',
         color: '#123456',
         contentScale: DEFAULT_CONTENT_SCALE,
@@ -61,6 +110,7 @@ describe('withBackground', () => {
 
   it('adds the shape underneath and shrinks the content to fit inside it', () => {
     const layers = withBackground(content, {
+      ...DEFAULT_BACKGROUND,
       shape: 'circle',
       color: '#123456',
       contentScale: DEFAULT_CONTENT_SCALE,
@@ -77,6 +127,7 @@ describe('withBackground', () => {
 
   it('scales the content by the chosen size', () => {
     const layers = withBackground(content, {
+      ...DEFAULT_BACKGROUND,
       shape: 'circle',
       color: '#123456',
       contentScale: 0.9,
@@ -87,6 +138,7 @@ describe('withBackground', () => {
 
   it('does not mutate the content layers', () => {
     withBackground(content, {
+      ...DEFAULT_BACKGROUND,
       shape: 'rounded-square',
       color: '#123456',
       contentScale: DEFAULT_CONTENT_SCALE,

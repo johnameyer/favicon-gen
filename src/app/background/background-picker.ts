@@ -1,13 +1,18 @@
 import { Component, computed, model } from '@angular/core';
-import { BackgroundOptions, BackgroundShape, DEFAULT_BACKGROUND } from './background';
+import {
+  BackgroundFill,
+  BackgroundOptions,
+  BackgroundShape,
+  DEFAULT_BACKGROUND,
+} from './background';
 
-/** Shape + color controls for the background shared by every source mode. */
+/** Shape, fill and size controls for the background shared by every source mode. */
 @Component({
   selector: 'app-background-picker',
   template: `
     <div class="background-picker">
       <label class="background-picker-row">
-        Background
+        Shape
         <select
           (change)="update({ shape: $any($event.target).value })"
           data-testid="background-shape"
@@ -20,8 +25,38 @@ import { BackgroundOptions, BackgroundShape, DEFAULT_BACKGROUND } from './backgr
         </select>
       </label>
       @if (background().shape !== 'none') {
+        @if (background().shape === 'rounded-square') {
+          <label class="background-picker-row">
+            Corner radius
+            <span class="background-picker-slider">
+              <input
+                type="range"
+                min="0"
+                max="50"
+                step="1"
+                [value]="background().cornerRadius"
+                (input)="update({ cornerRadius: +$any($event.target).value })"
+                data-testid="background-corner-radius"
+              />
+              <output>{{ background().cornerRadius }}%</output>
+            </span>
+          </label>
+        }
         <label class="background-picker-row">
-          Background color
+          Fill
+          <select
+            (change)="update({ fill: $any($event.target).value })"
+            data-testid="background-fill"
+          >
+            @for (fill of fills; track fill.value) {
+              <option [value]="fill.value" [selected]="background().fill === fill.value">
+                {{ fill.label }}
+              </option>
+            }
+          </select>
+        </label>
+        <label class="background-picker-row">
+          {{ background().fill === 'solid' ? 'Color' : 'Start color' }}
           <input
             type="color"
             [value]="background().color"
@@ -29,8 +64,36 @@ import { BackgroundOptions, BackgroundShape, DEFAULT_BACKGROUND } from './backgr
             data-testid="background-color"
           />
         </label>
+        @if (background().fill !== 'solid') {
+          <label class="background-picker-row">
+            End color
+            <input
+              type="color"
+              [value]="background().color2"
+              (input)="update({ color2: $any($event.target).value.toUpperCase() })"
+              data-testid="background-color2"
+            />
+          </label>
+        }
+        @if (background().fill === 'linear') {
+          <label class="background-picker-row">
+            Angle
+            <span class="background-picker-slider">
+              <input
+                type="range"
+                min="0"
+                max="360"
+                step="5"
+                [value]="background().angle"
+                (input)="update({ angle: +$any($event.target).value })"
+                data-testid="background-angle"
+              />
+              <output>{{ background().angle }}°</output>
+            </span>
+          </label>
+        }
         <label class="background-picker-row">
-          Size
+          Content size
           <span class="background-picker-slider">
             <input
               type="range"
@@ -56,6 +119,12 @@ export class BackgroundPicker {
     { value: 'none', label: 'None (transparent)' },
     { value: 'rounded-square', label: 'Rounded square' },
     { value: 'circle', label: 'Circle' },
+  ];
+
+  readonly fills: { value: BackgroundFill; label: string }[] = [
+    { value: 'solid', label: 'Solid' },
+    { value: 'linear', label: 'Linear gradient' },
+    { value: 'radial', label: 'Radial gradient' },
   ];
 
   /** Content size relative to the shape, as a whole percentage for the slider. */
