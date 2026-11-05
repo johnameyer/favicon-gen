@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { waitForPreviewLoaded, waitForSelectionLoaded } from './helpers';
+import { selectEmoji, waitForPreviewLoaded, waitForSelectionLoaded } from './helpers';
 
 test('recoloring a color group updates the canvas preview and download still works', async ({ page }) => {
   await page.goto('/');
@@ -7,17 +7,9 @@ test('recoloring a color group updates the canvas preview and download still wor
   // Wait for the initial placeholder emoji to finish loading.
   await waitForPreviewLoaded(page);
 
-  // Search for/select the car emoji so we're recoloring a real multi-color SVG.
-  const search = page.locator('[data-testid="emoji-picker-search"]');
-  await search.fill('car');
-
-  const grid = page.locator('[data-testid="emoji-picker-grid"]');
-  await expect(grid).toBeVisible();
-
-  const firstResult = page.locator('.emoji-picker-item').first();
-  await firstResult.click();
-
-  await waitForSelectionLoaded(page);
+  // Select the car emoji so we're recoloring a real multi-color SVG. By
+  // exact label: "car" also substring-matches e.g. "scared" (fearful face).
+  await selectEmoji(page, 'car', 'automobile');
 
   const canvas = page.locator('app-canvas-preview canvas');
   await expect(canvas).toBeVisible();
@@ -77,11 +69,7 @@ test('splitting a color group breaks it into individual single-color groups', as
 
   await waitForPreviewLoaded(page);
 
-  const search = page.locator('[data-testid="emoji-picker-search"]');
-  await search.fill('car');
-  await expect(page.locator('[data-testid="emoji-picker-grid"]')).toBeVisible();
-  await page.locator('.emoji-picker-item').first().click();
-  await waitForSelectionLoaded(page);
+  await selectEmoji(page, 'car', 'automobile');
 
   const groups = page.locator('[data-testid="recolor-group"]');
   await expect(groups.first()).toBeVisible({ timeout: 15000 });
@@ -138,11 +126,7 @@ test('expanding a group and setting an individual member override recolors that 
 
   await waitForPreviewLoaded(page);
 
-  const search = page.locator('[data-testid="emoji-picker-search"]');
-  await search.fill('car');
-  await expect(page.locator('[data-testid="emoji-picker-grid"]')).toBeVisible();
-  await page.locator('.emoji-picker-item').first().click();
-  await waitForSelectionLoaded(page);
+  await selectEmoji(page, 'car', 'automobile');
 
   const canvas = page.locator('app-canvas-preview canvas');
   await expect(canvas).toBeVisible();

@@ -19,3 +19,24 @@ export async function waitForSelectionLoaded(page: Page): Promise<void> {
   await expect(page.locator('[data-testid="selection-error"]')).toBeHidden();
 }
 
+/**
+ * Searches for and selects the emoji with exactly `label`, then waits until
+ * the preview has redrawn with it. Waiting for the redraw matters: until
+ * then the recolor panel can still show the previous emoji's groups, and a
+ * test interacting with those races the swap.
+ */
+export async function selectEmoji(page: Page, search: string, label: string): Promise<void> {
+  const canvas = page.locator('app-canvas-preview canvas');
+  const readPixels = () =>
+    canvas.evaluate((el: HTMLCanvasElement) =>
+      Array.from(el.getContext('2d')!.getImageData(0, 0, el.width, el.height).data),
+    );
+  const before = await readPixels();
+
+  await page.locator('[data-testid="emoji-picker-search"]').fill(search);
+  await page.getByRole('button', { name: label, exact: true }).first().click();
+  await waitForSelectionLoaded(page);
+  await expect
+    .poll(async () => (await readPixels()).some((value, index) => value !== before[index]))
+    .toBe(true);
+}
