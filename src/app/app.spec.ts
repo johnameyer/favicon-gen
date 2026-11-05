@@ -15,7 +15,10 @@ describe('App', () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [
-        { provide: EmojiSourceService, useValue: { fetchEmoji, fetchPlaceholderEmoji: fetchEmoji } },
+        {
+          provide: EmojiSourceService,
+          useValue: { fetchEmoji, fetchPlaceholderEmoji: fetchEmoji },
+        },
         { provide: FaviconExportService, useValue: { exportIco, exportBundle } },
       ],
     }).compileComponents();
@@ -61,6 +64,56 @@ describe('App', () => {
     expect(fixture.componentInstance.selectedLayers()?.[0].svgMarkup).toBe('<svg>uploaded</svg>');
   });
 
+  describe('shared background', () => {
+    it('adopts the fetched placeholder as content', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      expect(fixture.componentInstance.selectedLayers()?.[0].svgMarkup).toBe('<svg>mock</svg>');
+    });
+
+    it('outputs only the content when there is no background', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const app = fixture.componentInstance;
+      app.onSvgUploaded('<svg>uploaded</svg>');
+      expect(app.outputLayers()).toEqual(app.selectedLayers());
+    });
+
+    it('puts the background under the content, without changing the content', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const app = fixture.componentInstance;
+      app.background.set({ shape: 'circle', color: '#FF0000', contentScale: 0.68 });
+
+      app.onSvgUploaded('<svg>uploaded</svg>');
+      expect(app.outputLayers()?.map((layer) => layer.id)).toEqual([
+        'background',
+        'placeholder-emoji',
+      ]);
+      expect(app.outputLayers()?.[0].svgMarkup).toContain('<circle');
+      expect(app.selectedLayers()?.[0].transform.scale).toBe(1);
+    });
+
+    it('exports the composed layers', async () => {
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+      const clickSpy = vi
+        .spyOn(HTMLAnchorElement.prototype, 'click')
+        .mockImplementation(() => undefined);
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const app = fixture.componentInstance;
+      app.background.set({ shape: 'rounded-square', color: '#00FF00', contentScale: 0.68 });
+
+      await app.download();
+
+      const exported = exportBundle.mock.calls[0][0];
+      expect(exported).toHaveLength(2);
+      expect(exported[0].id).toBe('background');
+      clickSpy.mockRestore();
+    });
+  });
+
   describe('export mode toggle', () => {
     let createObjectURLSpy: ReturnType<typeof vi.spyOn>;
 
@@ -80,7 +133,9 @@ describe('App', () => {
       await fixture.whenStable();
       const app = fixture.componentInstance;
 
-      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      const clickSpy = vi
+        .spyOn(HTMLAnchorElement.prototype, 'click')
+        .mockImplementation(() => undefined);
       let downloadedFilename: string | undefined;
       const appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => {
         downloadedFilename = (node as HTMLAnchorElement).download;
@@ -89,7 +144,7 @@ describe('App', () => {
 
       await app.download();
 
-      expect(exportBundle).toHaveBeenCalledWith(app.currentLayers());
+      expect(exportBundle).toHaveBeenCalledWith(app.outputLayers());
       expect(exportIco).not.toHaveBeenCalled();
       expect(createObjectURLSpy).toHaveBeenCalled();
       expect(downloadedFilename).toBe('favicon-package.zip');
@@ -103,7 +158,9 @@ describe('App', () => {
       const app = fixture.componentInstance;
       app.setExportMode('ico');
 
-      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+      const clickSpy = vi
+        .spyOn(HTMLAnchorElement.prototype, 'click')
+        .mockImplementation(() => undefined);
       let downloadedFilename: string | undefined;
       const appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => {
         downloadedFilename = (node as HTMLAnchorElement).download;
@@ -112,7 +169,7 @@ describe('App', () => {
 
       await app.download();
 
-      expect(exportIco).toHaveBeenCalledWith(app.currentLayers());
+      expect(exportIco).toHaveBeenCalledWith(app.outputLayers());
       expect(exportBundle).not.toHaveBeenCalled();
       expect(downloadedFilename).toBe('favicon.ico');
       clickSpy.mockRestore();

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CanvasPreview, buildPlaceholderLayers } from './canvas/canvas-preview';
 import { EmojiSourceService } from './canvas/emoji-source.service';
 import { EmojiPicker, EmojiSelection } from './emoji-picker/emoji-picker';
@@ -6,6 +6,8 @@ import { SvgUpload } from './svg-upload/svg-upload';
 import { Layer } from './models/layer';
 import { FaviconExportService } from './export/favicon-export.service';
 import { RecolorPanel } from './recolor/recolor-panel';
+import { BackgroundPicker } from './background/background-picker';
+import { BackgroundOptions, DEFAULT_BACKGROUND, withBackground } from './background/background';
 
 /** Which source tab is currently active/being used to feed the canvas. */
 export type SourceTab = 'emoji' | 'upload';
@@ -15,7 +17,7 @@ export type ExportMode = 'ico' | 'bundle';
 
 @Component({
   selector: 'app-root',
-  imports: [CanvasPreview, EmojiPicker, SvgUpload, RecolorPanel],
+  imports: [CanvasPreview, EmojiPicker, SvgUpload, RecolorPanel, BackgroundPicker],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -26,15 +28,22 @@ export class App {
   /** Which source tab (emoji picker vs. custom SVG upload) is active. */
   readonly activeTab = signal<SourceTab>('emoji');
 
-  /** Latest layer stack resolved by the preview (explicit input or fetched placeholder). */
-  readonly currentLayers = signal<Layer[] | undefined>(undefined);
-
   /**
-   * Explicit layer stack to pass into CanvasPreview once the user has picked
-   * an emoji or uploaded a file. Undefined means "use CanvasPreview's own
-   * default placeholder".
+   * The content layer stack from the active source (emoji, upload, or the
+   * preview's fetched placeholder), without the shared background.
+   * Undefined until the placeholder resolves; CanvasPreview fetches it
+   * itself while no layers are passed in.
    */
   readonly selectedLayers = signal<Layer[] | undefined>(undefined);
+
+  /** Background shape shared by every source mode. */
+  readonly background = signal<BackgroundOptions>(DEFAULT_BACKGROUND);
+
+  /** What's actually previewed and exported: the content plus the shared background. */
+  readonly outputLayers = computed(() => {
+    const content = this.selectedLayers();
+    return content && withBackground(content, this.background());
+  });
 
   /** True while fetching the SVG for a picker-driven selection. */
   readonly selectionLoading = signal(false);
@@ -45,8 +54,15 @@ export class App {
   /** Which export mode the download button uses: ICO-only or the full zip bundle. */
   readonly exportMode = signal<ExportMode>('bundle');
 
+  /**
+   * Adopts the preview's fetched placeholder as the content, so it gets the
+   * shared background too. Ignored once a source has supplied layers, since
+   * the preview then just echoes back the composed `outputLayers`.
+   */
   onLayersResolved(layers: Layer[]): void {
-    this.currentLayers.set(layers);
+    if (!this.selectedLayers()) {
+      this.selectedLayers.set(layers);
+    }
   }
 
   setActiveTab(tab: SourceTab): void {
@@ -59,7 +75,7 @@ export class App {
    * existing `layers` input reactivity re-renders with the new colors.
    */
   onColorsChanged(colorOverrides: Record<string, string>): void {
-    const layers = this.currentLayers();
+    const layers = this.selectedLayers();
     if (!layers || layers.length === 0) {
       return;
     }
@@ -100,13 +116,15 @@ export class App {
   }
 
   async download(): Promise<void> {
-    const layers = this.currentLayers();
+    const layers = this.outputLayers();
     if (!layers) {
       return;
     }
     const mode = this.exportMode();
     const blob =
-      mode === 'ico' ? await this.exportService.exportIco(layers) : await this.exportService.exportBundle(layers);
+      mode === 'ico'
+        ? await this.exportService.exportIco(layers)
+        : await this.exportService.exportBundle(layers);
     const filename = mode === 'ico' ? 'favicon.ico' : 'favicon-package.zip';
 
     const url = URL.createObjectURL(blob);
