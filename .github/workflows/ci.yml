@@ -1,5 +1,11 @@
 name: ci
-on: [push]
+on:
+  push:
+  workflow_dispatch:
+  # Weekly run, so a breaking change in an external dependency (e.g. the
+  # emoji CDN, which the e2e tests hit for real) surfaces without a push.
+  schedule:
+    - cron: '0 14 * * 1'
 
 jobs:
   lint:

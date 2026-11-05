@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { waitForPreviewLoaded, waitForSelectionLoaded } from './helpers';
 
 test('recoloring a color group updates the canvas preview and download still works', async ({ page }) => {
   await page.goto('/');
 
   // Wait for the initial placeholder emoji to finish loading.
-  const loading = page.locator('[data-testid="canvas-preview-loading"]');
-  await expect(loading).toBeHidden({ timeout: 15000 });
+  await waitForPreviewLoaded(page);
 
   // Search for/select the car emoji so we're recoloring a real multi-color SVG.
   const search = page.locator('[data-testid="emoji-picker-search"]');
@@ -17,7 +17,7 @@ test('recoloring a color group updates the canvas preview and download still wor
   const firstResult = page.locator('.emoji-picker-item').first();
   await firstResult.click();
 
-  await expect(page.locator('[data-testid="selection-loading"]')).toBeHidden({ timeout: 15000 });
+  await waitForSelectionLoaded(page);
 
   const canvas = page.locator('app-canvas-preview canvas');
   await expect(canvas).toBeVisible();
@@ -75,14 +75,13 @@ test('recoloring a color group updates the canvas preview and download still wor
 test('splitting a color group breaks it into individual single-color groups', async ({ page }) => {
   await page.goto('/');
 
-  const loading = page.locator('[data-testid="canvas-preview-loading"]');
-  await expect(loading).toBeHidden({ timeout: 15000 });
+  await waitForPreviewLoaded(page);
 
   const search = page.locator('[data-testid="emoji-picker-search"]');
   await search.fill('car');
   await expect(page.locator('[data-testid="emoji-picker-grid"]')).toBeVisible();
   await page.locator('.emoji-picker-item').first().click();
-  await expect(page.locator('[data-testid="selection-loading"]')).toBeHidden({ timeout: 15000 });
+  await waitForSelectionLoaded(page);
 
   const groups = page.locator('[data-testid="recolor-group"]');
   await expect(groups.first()).toBeVisible({ timeout: 15000 });
@@ -102,8 +101,7 @@ test('splitting a color group breaks it into individual single-color groups', as
 test('a gradient-based emoji (grinning face) shows its gradient colors as recolorable swatches', async ({ page }) => {
   await page.goto('/');
 
-  const loading = page.locator('[data-testid="canvas-preview-loading"]');
-  await expect(loading).toBeHidden({ timeout: 15000 });
+  await waitForPreviewLoaded(page);
 
   // The grinning face's yellow skin is defined via a <radialGradient>/<stop
   // style="stop-color:...">, not a flat fill - this exercises the gradient
@@ -112,7 +110,7 @@ test('a gradient-based emoji (grinning face) shows its gradient colors as recolo
   await search.fill('grinning');
   await expect(page.locator('[data-testid="emoji-picker-grid"]')).toBeVisible();
   await page.locator('.emoji-picker-item').first().click();
-  await expect(page.locator('[data-testid="selection-loading"]')).toBeHidden({ timeout: 15000 });
+  await waitForSelectionLoaded(page);
 
   const groups = page.locator('[data-testid="recolor-group"]');
   await expect(groups.first()).toBeVisible({ timeout: 15000 });
@@ -138,14 +136,13 @@ test('expanding a group and setting an individual member override recolors that 
 }) => {
   await page.goto('/');
 
-  const loading = page.locator('[data-testid="canvas-preview-loading"]');
-  await expect(loading).toBeHidden({ timeout: 15000 });
+  await waitForPreviewLoaded(page);
 
   const search = page.locator('[data-testid="emoji-picker-search"]');
   await search.fill('car');
   await expect(page.locator('[data-testid="emoji-picker-grid"]')).toBeVisible();
   await page.locator('.emoji-picker-item').first().click();
-  await expect(page.locator('[data-testid="selection-loading"]')).toBeHidden({ timeout: 15000 });
+  await waitForSelectionLoaded(page);
 
   const canvas = page.locator('app-canvas-preview canvas');
   await expect(canvas).toBeVisible();

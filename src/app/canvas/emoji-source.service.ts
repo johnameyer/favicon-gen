@@ -5,6 +5,20 @@ import { Injectable } from '@angular/core';
  */
 const DEFAULT_EMOJI_CODEPOINTS = '1f600';
 
+/**
+ * jsDelivr base URL for googlefonts/noto-emoji, pinned to the commit of the
+ * `v2026-09-24-unicode18_0` release.
+ *
+ * This used to track `@main`, which broke every emoji when upstream
+ * restructured the repo on 2026-09-17 ("Add emoji 18 SVGs and change the
+ * directory structure": `svg/` moved to `2D/svg/`). Pinning means an
+ * upstream reorganization can't break the app again; bump it deliberately
+ * (the `emoji-cdn` e2e spec checks the paths still resolve). It's a commit
+ * SHA rather than the tag name because jsDelivr 404s on that non-semver tag.
+ */
+export const NOTO_EMOJI_CDN_BASE =
+  'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e';
+
 /** Inclusive range of regional indicator symbol codepoints (U+1F1E6 'A' .. U+1F1FF 'Z'). */
 const REGIONAL_INDICATOR_START = 0x1f1e6;
 const REGIONAL_INDICATOR_END = 0x1f1ff;
@@ -24,13 +38,15 @@ const TAG_SEQUENCE_TERMINATOR = 0xe007f;
  *
  * `Array.from` iterates by Unicode code point (not UTF-16 code unit), so
  * surrogate pairs are handled correctly. Variation selector-16 (U+FE0F) is
- * filtered out because Noto's filenames omit it.
+ * filtered out because Noto's filenames omit it. Each codepoint is padded
+ * to at least 4 hex digits, as Noto's filenames are (e.g. keycap 1️⃣ is
+ * "0031_20e3", © is "00a9").
  */
 export function emojiToCodepoints(emoji: string): string {
   return Array.from(emoji)
     .map((char) => char.codePointAt(0)!)
     .filter((codePoint) => codePoint !== 0xfe0f)
-    .map((codePoint) => codePoint.toString(16).toLowerCase())
+    .map((codePoint) => codePoint.toString(16).toLowerCase().padStart(4, '0'))
     .join('_');
 }
 
@@ -77,7 +93,7 @@ function decodeTagSequenceFlag(codePoints: number[]): string | null {
  * Resolves the Noto Emoji SVG URL for a given codepoint fragment, routing
  * flag emoji to their actual location on the CDN.
  *
- * Most emoji live under `svg/emoji_u{codepoints}.svg`, but flags do not:
+ * Most emoji live under `2D/svg/emoji_u{codepoints}.svg`, but flags do not:
  * - Plain two-letter country flags (regional-indicator pairs, e.g. 🇺🇸) live
  *   under `third_party/region-flags/svg/{CODE}.svg` (e.g. "US.svg").
  * - Subdivision flags (e.g. England/Scotland/Wales, US/Canadian/Mexican
@@ -85,18 +101,17 @@ function decodeTagSequenceFlag(codePoints: number[]): string | null {
  *   under `third_party/region-flags/svg/{CODE}.svg` (e.g. "GB-ENG.svg").
  * - Simple flag symbols (🏁🚩🎌🏴) and everything else resolve fine via the
  *   normal path already.
- * - A handful of flag emoji (🏳️🏳️‍🌈🏳️‍⚧️🏴‍☠️) have no known asset under either
- *   scheme and will simply 404/fail like any other unresolvable emoji.
+ * - Flag ZWJ sequences (🏳️‍🌈🏳️‍⚧️🏴‍☠️) use the normal path too.
  */
 export function resolveEmojiSvgUrl(codepoints: string): string {
   const codePoints = parseCodepoints(codepoints);
 
   const regionCode = decodeRegionalIndicatorPair(codePoints) ?? decodeTagSequenceFlag(codePoints);
   if (regionCode) {
-    return `https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/third_party/region-flags/svg/${regionCode}.svg`;
+    return `${NOTO_EMOJI_CDN_BASE}/third_party/region-flags/svg/${regionCode}.svg`;
   }
 
-  return `https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u${codepoints}.svg`;
+  return `${NOTO_EMOJI_CDN_BASE}/2D/svg/emoji_u${codepoints}.svg`;
 }
 
 /**
@@ -104,9 +119,7 @@ export function resolveEmojiSvgUrl(codepoints: string): string {
  * jsDelivr's GitHub proxy for googlefonts/noto-emoji.
  *
  * jsDelivr's `gh` endpoint pattern is `cdn.jsdelivr.net/gh/{user}/{repo}@{ref}/{path}`.
- * The `@main` branch ref works fine for this repo/path (verified: returns
- * `200` with `content-type: image/svg+xml`), so there was no need to pin to
- * a commit SHA or release tag.
+ * The ref is pinned to a release's commit; see `NOTO_EMOJI_CDN_BASE`.
  *
  * URL resolution (including flag routing) is delegated to
  * `resolveEmojiSvgUrl`.

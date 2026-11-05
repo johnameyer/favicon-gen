@@ -11,52 +11,66 @@ describe('emojiToCodepoints', () => {
     expect(emojiToCodepoints('👨‍👩‍👧')).toBe('1f468_200d_1f469_200d_1f467');
   });
 
+  it('pads codepoints to 4 hex digits like Noto filenames', () => {
+    expect(emojiToCodepoints('1️⃣')).toBe('0031_20e3');
+    expect(emojiToCodepoints('#️⃣')).toBe('0023_20e3');
+    expect(emojiToCodepoints('©️')).toBe('00a9');
+  });
+
   it('strips variation selector-16 (U+FE0F)', () => {
     expect(emojiToCodepoints('❤️')).toBe('2764');
   });
 });
 
 describe('resolveEmojiSvgUrl', () => {
+  it('pins the CDN to a commit, not a moving branch', () => {
+    // Tracking @main broke every emoji when upstream restructured the repo.
+    for (const codepoints of ['1f600', '1f1fa_1f1f8']) {
+      const ref = /noto-emoji@([^/]+)\//.exec(resolveEmojiSvgUrl(codepoints))?.[1];
+      expect(ref).toMatch(/^[0-9a-f]{40}$/);
+    }
+  });
+
   it('routes a regional-indicator country flag (🇺🇸) to region-flags/svg/US.svg', () => {
     expect(resolveEmojiSvgUrl(emojiToCodepoints('🇺🇸'))).toBe(
-      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/third_party/region-flags/svg/US.svg',
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/third_party/region-flags/svg/US.svg',
     );
   });
 
   it('routes a regional-indicator country flag (🇫🇷) to region-flags/svg/FR.svg', () => {
     expect(resolveEmojiSvgUrl(emojiToCodepoints('🇫🇷'))).toBe(
-      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/third_party/region-flags/svg/FR.svg',
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/third_party/region-flags/svg/FR.svg',
     );
   });
 
   it('routes a tag-sequence subdivision flag (England) to region-flags/svg/GB-ENG.svg', () => {
     // Black flag base + tag chars spelling "gbeng" + terminator.
     expect(resolveEmojiSvgUrl('1f3f4_e0067_e0062_e0065_e006e_e0067_e007f')).toBe(
-      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/third_party/region-flags/svg/GB-ENG.svg',
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/third_party/region-flags/svg/GB-ENG.svg',
     );
   });
 
   it('routes a tag-sequence subdivision flag (Scotland) to region-flags/svg/GB-SCT.svg', () => {
     expect(resolveEmojiSvgUrl('1f3f4_e0067_e0062_e0073_e0063_e0074_e007f')).toBe(
-      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/third_party/region-flags/svg/GB-SCT.svg',
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/third_party/region-flags/svg/GB-SCT.svg',
     );
   });
 
   it('leaves a normal single-codepoint emoji on the standard svg path', () => {
     expect(resolveEmojiSvgUrl('1f600')).toBe(
-      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f600.svg',
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/svg/emoji_u1f600.svg',
     );
   });
 
   it('leaves a non-flag multi-codepoint ZWJ sequence (family) on the standard svg path', () => {
     expect(resolveEmojiSvgUrl('1f468_200d_1f469_200d_1f467')).toBe(
-      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f468_200d_1f469_200d_1f467.svg',
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/svg/emoji_u1f468_200d_1f469_200d_1f467.svg',
     );
   });
 
   it('leaves a simple flag symbol (chequered flag, single codepoint) on the standard svg path', () => {
     expect(resolveEmojiSvgUrl('1f3c1')).toBe(
-      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f3c1.svg',
+      'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/svg/emoji_u1f3c1.svg',
     );
   });
 });
@@ -87,7 +101,7 @@ describe('EmojiSourceService', () => {
       const service = TestBed.inject(EmojiSourceService);
       await expect(service.fetchEmoji('1f468_200d_1f469_200d_1f467')).resolves.toBe(svg);
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f468_200d_1f469_200d_1f467.svg',
+        'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/svg/emoji_u1f468_200d_1f469_200d_1f467.svg',
       );
     });
 
@@ -124,7 +138,7 @@ describe('EmojiSourceService', () => {
       const service = TestBed.inject(EmojiSourceService);
       await expect(service.fetchPlaceholderEmoji()).resolves.toBe(svg);
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f600.svg',
+        'https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/svg/emoji_u1f600.svg',
       );
     });
   });

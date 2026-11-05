@@ -119,7 +119,7 @@ function grinningFaceGradientSvg(): string {
 /**
  * Real Noto grinning-face SVG (emoji_u1f600.svg,
  * https://github.com/googlefonts/noto-emoji, fetched via
- * cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f600.svg),
+ * cdn.jsdelivr.net/gh/googlefonts/noto-emoji@v2.051/svg/emoji_u1f600.svg),
  * trimmed to the color-bearing elements. Colors present: the face's yellow
  * radial-gradient stops (#FDE030/#F7C02B/#F4A223), the near-black eye/mouth
  * "ink" outline (#422B0D), mouth interior shading (#896024), mouth fill
@@ -297,7 +297,7 @@ describe('groupExtractedColors - hue clustering', () => {
 /**
  * Real Noto fire-emoji flame gradient (emoji_u1f525.svg,
  * https://github.com/googlefonts/noto-emoji, fetched via
- * cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f525.svg),
+ * cdn.jsdelivr.net/gh/googlefonts/noto-emoji@v2.051/svg/emoji_u1f525.svg),
  * reduced to its color-bearing elements. `SVGID_1_` is the flame's
  * orange->red gradient (spans ~31.7° of hue); `SVGID_2_` is a separate
  * yellow glow gradient, structurally unrelated to the flame.

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForPreviewLoaded, waitForSelectionLoaded } from './helpers';
 
 test('searching and selecting an emoji updates the canvas preview and download still works', async ({
   page,
@@ -6,8 +7,7 @@ test('searching and selecting an emoji updates the canvas preview and download s
   await page.goto('/');
 
   // Wait for the initial placeholder emoji to finish loading.
-  const loading = page.locator('[data-testid="canvas-preview-loading"]');
-  await expect(loading).toBeHidden({ timeout: 15000 });
+  await waitForPreviewLoaded(page);
 
   const canvas = page.locator('app-canvas-preview canvas');
   await expect(canvas).toBeVisible();
@@ -30,7 +30,7 @@ test('searching and selecting an emoji updates the canvas preview and download s
   await firstResult.click();
 
   // Wait for the picker-driven fetch to resolve and the canvas to update.
-  await expect(page.locator('[data-testid="selection-loading"]')).toBeHidden({ timeout: 15000 });
+  await waitForSelectionLoaded(page);
 
   await expect
     .poll(
@@ -84,3 +84,34 @@ test('a search with no matches shows the empty state', async ({ page }) => {
 
   await expect(page.locator('[data-testid="emoji-picker-no-results"]')).toBeVisible();
 });
+
+// One emoji per CDN path scheme, including the cases that have broken before:
+// zero-padded keycaps, flag ZWJ sequences, and regional-indicator flags.
+for (const [search, label] of [
+  ['keycap_1', 'keycap 1'],
+  ['rainbow_flag', 'rainbow flag'],
+  ['flag_japan', 'flag japan'],
+]) {
+  test(`selecting "${label}" loads it into the preview`, async ({ page }) => {
+    await page.goto('/');
+    await waitForPreviewLoaded(page);
+
+    const canvas = page.locator('app-canvas-preview canvas');
+    const readPixels = () =>
+      canvas.evaluate((el: HTMLCanvasElement) =>
+        Array.from(el.getContext('2d')!.getImageData(0, 0, el.width, el.height).data),
+      );
+    const beforePixels = await readPixels();
+
+    await page.locator('[data-testid="emoji-picker-search"]').fill(search);
+    await page.getByRole('button', { name: label, exact: true }).first().click();
+    await waitForSelectionLoaded(page);
+
+    await expect
+      .poll(async () => {
+        const afterPixels = await readPixels();
+        return afterPixels.some((value, index) => value !== beforePixels[index]);
+      })
+      .toBe(true);
+  });
+}

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForPreviewLoaded } from './helpers';
 
 test('app shell loads', async ({ page }) => {
   await page.goto('/');
@@ -13,8 +14,7 @@ test('canvas preview renders', async ({ page }) => {
   // The placeholder emoji is fetched from a CDN over the real network, so
   // wait for the loading indicator to appear and then disappear before
   // checking the canvas contents.
-  const loading = page.locator('[data-testid="canvas-preview-loading"]');
-  await expect(loading).toBeHidden({ timeout: 15000 });
+  await waitForPreviewLoaded(page);
 
   const canvas = page.locator('app-canvas-preview canvas');
   await expect(canvas).toBeVisible();

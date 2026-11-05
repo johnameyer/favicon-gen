@@ -1,11 +1,11 @@
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { waitForPreviewLoaded } from './helpers';
 
 test('uploading a valid SVG updates the canvas preview and download still works', async ({ page }) => {
   await page.goto('/');
 
-  const loading = page.locator('[data-testid="canvas-preview-loading"]');
-  await expect(loading).toBeHidden({ timeout: 15000 });
+  await waitForPreviewLoaded(page);
 
   const canvas = page.locator('app-canvas-preview canvas');
   await expect(canvas).toBeVisible();
@@ -54,8 +54,7 @@ test('uploading a valid SVG updates the canvas preview and download still works'
 test('uploading an invalid file shows an error instead of breaking the canvas', async ({ page }) => {
   await page.goto('/');
 
-  const loading = page.locator('[data-testid="canvas-preview-loading"]');
-  await expect(loading).toBeHidden({ timeout: 15000 });
+  await waitForPreviewLoaded(page);
 
   await page.locator('[data-testid="tab-upload"]').click();
 
