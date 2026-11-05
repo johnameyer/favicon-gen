@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { App } from './app';
 import { EmojiSourceService } from './canvas/emoji-source.service';
 import { FaviconExportService } from './export/favicon-export.service';
@@ -64,6 +64,49 @@ describe('App', () => {
     expect(fixture.componentInstance.selectedLayers()?.[0].svgMarkup).toBe('<svg>uploaded</svg>');
   });
 
+  /**
+   * Opens the letter tab and waits for its first SVG, which is emitted after
+   * an async glyph measurement. fetch is stubbed (never settling) so no font
+   * request can reach the network.
+   */
+  async function openLetterTab(fixture: ComponentFixture<App>): Promise<void> {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => undefined)));
+    fixture.componentInstance.setActiveTab('letter');
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('loads generated letter SVG as the current source when the letter tab opens', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+
+    await openLetterTab(fixture);
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-letter-input')).toBeTruthy();
+    expect(fixture.componentInstance.selectedLayers()?.[0].svgMarkup).toContain('>A</text>');
+  });
+
+  it('hides the recolor panel for letter content, and shows it again for an emoji', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const app = fixture.componentInstance;
+
+    await openLetterTab(fixture);
+    expect(app.letterSourceActive()).toBe(true);
+    expect(compiled.querySelector('app-recolor-panel')).toBeFalsy();
+
+    await app.onEmojiSelected({ emoji: '🐱', codepoints: '1f431', name: 'cat face' });
+    fixture.detectChanges();
+    expect(app.letterSourceActive()).toBe(false);
+    expect(compiled.querySelector('app-recolor-panel')).toBeTruthy();
+  });
+
   describe('shared background', () => {
     it('adopts the fetched placeholder as content', async () => {
       const fixture = TestBed.createComponent(App);
@@ -79,7 +122,7 @@ describe('App', () => {
       expect(app.outputLayers()).toEqual(app.selectedLayers());
     });
 
-    it('puts the background under the content, without changing the content', async () => {
+    it('puts the background under the content for every source, without changing the content', async () => {
       const fixture = TestBed.createComponent(App);
       await fixture.whenStable();
       const app = fixture.componentInstance;
@@ -92,6 +135,10 @@ describe('App', () => {
       ]);
       expect(app.outputLayers()?.[0].svgMarkup).toContain('<circle');
       expect(app.selectedLayers()?.[0].transform.scale).toBe(1);
+
+      app.onLetterSvgGenerated('<svg>letter</svg>');
+      expect(app.outputLayers()?.[0].svgMarkup).toContain('<circle');
+      expect(app.outputLayers()?.[1].svgMarkup).toBe('<svg>letter</svg>');
     });
 
     it('exports the composed layers', async () => {

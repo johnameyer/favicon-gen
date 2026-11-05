@@ -3,6 +3,7 @@ import { CanvasPreview, buildPlaceholderLayers } from './canvas/canvas-preview';
 import { EmojiSourceService } from './canvas/emoji-source.service';
 import { EmojiPicker, EmojiSelection } from './emoji-picker/emoji-picker';
 import { SvgUpload } from './svg-upload/svg-upload';
+import { LetterInput } from './letter/letter-input';
 import { Layer } from './models/layer';
 import { FaviconExportService } from './export/favicon-export.service';
 import { RecolorPanel } from './recolor/recolor-panel';
@@ -10,14 +11,14 @@ import { BackgroundPicker } from './background/background-picker';
 import { BackgroundOptions, DEFAULT_BACKGROUND, withBackground } from './background/background';
 
 /** Which source tab is currently active/being used to feed the canvas. */
-export type SourceTab = 'emoji' | 'upload';
+export type SourceTab = 'emoji' | 'upload' | 'letter';
 
 /** Which export mode is selected for the download button. */
 export type ExportMode = 'ico' | 'bundle';
 
 @Component({
   selector: 'app-root',
-  imports: [CanvasPreview, EmojiPicker, SvgUpload, RecolorPanel, BackgroundPicker],
+  imports: [CanvasPreview, EmojiPicker, SvgUpload, LetterInput, RecolorPanel, BackgroundPicker],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -29,8 +30,8 @@ export class App {
   readonly activeTab = signal<SourceTab>('emoji');
 
   /**
-   * The content layer stack from the active source (emoji, upload, or the
-   * preview's fetched placeholder), without the shared background.
+   * The content layer stack from the active source (emoji, upload, letter,
+   * or the preview's fetched placeholder), without the shared background.
    * Undefined until the placeholder resolves; CanvasPreview fetches it
    * itself while no layers are passed in.
    */
@@ -44,6 +45,12 @@ export class App {
     const content = this.selectedLayers();
     return content && withBackground(content, this.background());
   });
+
+  /**
+   * Whether the current content came from the letter generator, which has
+   * its own color pickers, so the recolor panel is hidden.
+   */
+  readonly letterSourceActive = signal(false);
 
   /** True while fetching the SVG for a picker-driven selection. */
   readonly selectionLoading = signal(false);
@@ -85,11 +92,13 @@ export class App {
   }
 
   /**
-   * Shared "load this SVG markup as the current source" path, used by both
-   * the emoji picker (once its fetch resolves) and the SVG upload component.
+   * Shared "load this SVG markup as the current source" path, used by the
+   * emoji picker (once its fetch resolves), the SVG upload component and the
+   * letter generator.
    */
-  loadSvgAsCurrentSource(svgMarkup: string): void {
+  loadSvgAsCurrentSource(svgMarkup: string, fromLetter = false): void {
     this.selectedLayers.set(buildPlaceholderLayers(svgMarkup));
+    this.letterSourceActive.set(fromLetter);
   }
 
   async onEmojiSelected(selection: EmojiSelection): Promise<void> {
@@ -109,6 +118,10 @@ export class App {
 
   onSvgUploaded(svgMarkup: string): void {
     this.loadSvgAsCurrentSource(svgMarkup);
+  }
+
+  onLetterSvgGenerated(svgMarkup: string): void {
+    this.loadSvgAsCurrentSource(svgMarkup, true);
   }
 
   setExportMode(mode: ExportMode): void {

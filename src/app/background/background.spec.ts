@@ -1,6 +1,9 @@
 import { validateSvgMarkup } from '../svg-upload/svg-upload';
+import { DEFAULT_LETTER_OPTIONS } from '../letter/letter-svg';
+import { hexToHsl } from '../recolor/color-utils';
 import { IDENTITY_TRANSFORM, Layer } from '../models/layer';
 import {
+  DEFAULT_BACKGROUND,
   DEFAULT_CONTENT_SCALE,
   buildBackgroundSvg,
   withBackground,
@@ -33,6 +36,15 @@ describe('buildBackgroundSvg', () => {
     }
     expect(circle).toContain('<circle');
     expect(square).toContain('<rect');
+  });
+});
+
+describe('DEFAULT_BACKGROUND', () => {
+  it("contrasts with the letter generator's default color, so a default letter stays visible on a shape", () => {
+    const background = hexToHsl(DEFAULT_BACKGROUND.color);
+    const letter = hexToHsl(DEFAULT_LETTER_OPTIONS.color);
+    expect(DEFAULT_BACKGROUND.color).not.toBe(DEFAULT_LETTER_OPTIONS.color);
+    expect(Math.abs(background.l - letter.l)).toBeGreaterThan(30);
   });
 });
 

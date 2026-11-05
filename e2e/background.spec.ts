@@ -25,7 +25,7 @@ test('the background is drawn behind the content and carries across source modes
   // Near the top edge, outside the shrunken emoji but inside the square.
   await expect.poll(() => pixelAt(page, 128, 4)).toEqual([255, 0, 0, 255]);
 
-  await page.locator('[data-testid="tab-upload"]').click();
+  await page.locator('[data-testid="tab-letter"]').click();
   await expect(page.locator('[data-testid="background-shape"]')).toHaveValue('rounded-square');
   await expect.poll(() => pixelAt(page, 128, 4)).toEqual([255, 0, 0, 255]);
 
